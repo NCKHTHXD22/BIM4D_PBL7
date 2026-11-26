@@ -1,29 +1,74 @@
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><title>Mô phỏng 4D - TTYT huyện Kỳ Sơn</title>
+<html lang="vi"><head><meta charset="utf-8"><title>Mô phỏng thi công 4D - TTYT huyện Kỳ Sơn</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-html,body{margin:0;height:100%;overflow:hidden;background:#9fc3e6;font-family:Arial,sans-serif}
+:root{--bg:rgba(12,22,40,.84);--ac:#ffd400;--bd:#2d4a73}
+html,body{margin:0;height:100%;overflow:hidden;background:#9fc3e6;font-family:Arial,Helvetica,sans-serif;color:#fff}
 canvas{display:block}
-#title{position:fixed;left:24px;top:14px;color:#ffe800;font:bold 40px "Times New Roman",serif;text-shadow:2px 2px 4px #000;line-height:1.15;pointer-events:none}
-#sub{position:fixed;right:28px;bottom:120px;color:#fff;font:bold 30px "Times New Roman",serif;text-shadow:2px 2px 5px #000;text-align:right;pointer-events:none;max-width:70%}
-#sub small{display:block;font-size:26px}
-#legend{position:fixed;right:20px;top:16px;background:rgba(0,0,0,.45);color:#fff;padding:10px 14px;border-radius:8px;font-size:14px;line-height:1.7}
-#legend i{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:-2px;border-radius:3px}
-#ui{position:fixed;left:0;right:0;bottom:0;background:rgba(10,20,40,.78);color:#fff;padding:10px 18px}
-#ui button{background:#1f6feb;color:#fff;border:0;border-radius:6px;padding:6px 12px;margin:2px;cursor:pointer;font-size:13px}
-#ui button.sc{background:#2d3b55}
-#ui input[type=range]{width:100%}
-#row{display:flex;align-items:center;gap:12px}#date{font:bold 18px Arial;min-width:120px}
-#scenes{max-height:64px;overflow:auto;margin-top:4px}
+#title{position:fixed;left:18px;top:10px;color:#ffe800;font:bold 34px "Times New Roman",serif;text-shadow:2px 2px 4px #000;line-height:1.1;pointer-events:none}
+#title span{font-size:24px}
+#sub{position:fixed;left:50%;transform:translateX(-50%);bottom:118px;color:#fff;font:bold 26px "Times New Roman",serif;text-shadow:2px 2px 5px #000;text-align:center;pointer-events:none;width:70%}
+#sub small{display:block;font:20px Arial;color:#ffe9a0;margin-top:4px}
+#info{position:fixed;right:12px;top:10px;width:380px;max-height:calc(100% - 150px);overflow:auto;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;font-size:13px}
+#info h3{margin:2px 0 6px;color:var(--ac);font-size:15px}
+.kv{display:grid;grid-template-columns:92px 1fr;gap:3px 8px;margin-bottom:6px}.kv b{color:#9fc3ff;font-weight:normal}
+#status{padding:5px 8px;border-radius:6px;font-weight:bold;margin:4px 0}
+.task{border-left:4px solid #888;background:rgba(255,255,255,.06);margin:5px 0;padding:5px 7px;border-radius:4px;cursor:pointer}
+.task .bar{height:5px;background:#33415c;border-radius:3px;margin-top:4px}.task .bar i{display:block;height:5px;border-radius:3px;background:#4caf50}
+.task small{color:#c9d6ea}
+#ui{position:fixed;left:0;right:0;bottom:0;background:var(--bg);padding:8px 14px;border-top:1px solid var(--bd)}
+#ui button,#ui select{background:#1f6feb;color:#fff;border:0;border-radius:6px;padding:6px 10px;margin:2px;cursor:pointer;font-size:13px}
+#ui select{background:#2d3b55}
+#ui button.on{background:#e67e22}
+#row1{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#clock{font:bold 16px Arial;min-width:230px}
+#slider{width:100%;margin-top:4px}
+#panel{position:fixed;left:12px;top:90px;width:360px;max-height:calc(100% - 220px);overflow:auto;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:8px 10px;font-size:13px;display:none}
+#panel .tabs button{background:#2d3b55;color:#fff;border:0;border-radius:6px;padding:5px 10px;margin-right:4px;cursor:pointer}
+#panel .tabs button.on{background:#1f6feb}
+.grp{display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.grp span{flex:1;cursor:pointer}.grp em{color:#9fb3cc;font-size:11px;font-style:normal}
+.ph{color:var(--ac);font-weight:bold;margin:8px 0 2px}
+.tk{padding:3px 4px;cursor:pointer;border-radius:4px}.tk:hover{background:rgba(255,255,255,.1)}
+#help{position:fixed;right:12px;bottom:110px;background:var(--bg);border-radius:8px;padding:8px 10px;font-size:12px;display:none}
 #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b1a33;color:#fff;font-size:22px;z-index:9}
-body.rec #ui,body.rec #legend{display:none} body.rec #sub{bottom:40px}
+#legend{margin-top:6px;font-size:12px}#legend i{display:inline-block;width:11px;height:11px;margin:0 4px 0 8px;vertical-align:-1px;border-radius:2px}
+/* che do quay video */
+body.rec #ui,body.rec #panel,body.rec #help{display:none!important}
+body.rec #info{top:auto;bottom:24px;left:18px;right:auto;width:560px;max-height:none;font-size:15px}
+body.rec #sub{bottom:auto;top:16px;left:auto;right:24px;transform:none;text-align:right;width:auto;max-width:60%}
 </style>
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/jsm/"}}</script>
 </head><body>
 <div id="load">Đang tải mô hình… <span id="lp"></span></div>
-<div id="title">PBL7 - Nhóm 1<br><span style="font-size:30px">TTYT huyện Kỳ Sơn</span></div>
+<div id="title">PBL7 - Nhóm 1<br><span>TTYT huyện Kỳ Sơn - Mô phỏng thi công 4D</span></div>
 <div id="sub"></div>
-<div id="legend"><b>CHÚ GIẢI</b><br><i style="background:#c9c6c0"></i>Bê tông<br><i style="background:#9c3d1c"></i>Cốt thép<br><i style="background:#c8913f"></i>Ván khuôn, cây chống<br><i style="background:#3aa35c"></i>Giàn giáo, lưới<br><i style="background:#b5522e"></i>Tường gạch → trát</div>
-<div id="ui"><div id="row"><button id="play">▶ Play</button><span id="date"></span><input id="slider" type="range" min="0" max="1000" value="0"></div><div id="scenes"></div></div>
+<div id="info">
+  <h3>THÔNG TIN THI CÔNG</h3>
+  <div class="kv"><b>Ngày</b><span id="iDate"></span><b>Giờ</b><span id="iTime"></span><b>Thời tiết</b><span id="iWx"></span><b>Giai đoạn</b><span id="iPhase"></span><b>Tiến độ</b><span id="iProg"></span></div>
+  <div id="status"></div>
+  <h3 id="iTaskH">CÔNG VIỆC ĐANG THI CÔNG</h3>
+  <div id="iTasks"></div>
+  <div id="legend"><i style="background:#c9c6c0"></i>Bê tông<i style="background:#9c3d1c"></i>Cốt thép<i style="background:#c8913f"></i>Ván khuôn<i style="background:#3aa35c"></i>Giàn giáo<i style="background:#b5522e"></i>Tường</div>
+</div>
+<div id="panel">
+  <div class="tabs"><button id="tabT" class="on">Công việc (tiến độ)</button><button id="tabG">Hạng mục 3D</button></div>
+  <div id="pT"></div><div id="pG" style="display:none"></div>
+</div>
+<div id="help"><b>CHẾ ĐỘ GIÁM SÁT</b><br>W/S/↑/↓: tiến - lùi · A/D/←/→: sang trái - phải<br>Kéo chuột trái: quay đầu nhìn · Cuộn chuột: bước tới/lui<br>Q / E: xuống / lên 1 tầng · Shift: đi nhanh</div>
+<div id="ui">
+  <div id="row1">
+    <button id="play">▶ Chạy</button>
+    <select id="speed" title="Tốc độ"><option value="1">1 giờ / giây</option><option value="6">6 giờ / giây</option><option value="24" selected>1 ngày / giây</option><option value="120">5 ngày / giây</option><option value="480">20 ngày / giây</option></select>
+    <button id="prevD">◀ Ngày</button><button id="nextD">Ngày ▶</button>
+    <span id="clock"></span>
+    <button id="vOver" class="on">🛰 Tổng quan</button><button id="vSup">👷 Giám sát</button>
+    <button id="zin">＋</button><button id="zout">－</button>
+    <select id="wx"><option value="auto">Thời tiết: tự động</option><option value="sun">☀ Nắng</option><option value="rain">🌧 Mưa</option></select>
+    <button id="bPanel">☰ Chi tiết hạng mục</button>
+    <button id="bInfo" class="on">ℹ Thông tin</button>
+  </div>
+  <input id="slider" type="range" min="0" max="10000" value="0">
+</div>
 <script type="module" src="./app.js"></script>
 </body></html>

@@ -40,10 +40,21 @@ function makeWorker() {
   const hat = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), std(0xffd400)); hat.position.y = 1.72; g.add(hat);
   g.traverse(o => { if (o.isMesh) o.castShadow = true; }); return g;
 }
+const WHEEL = new THREE.CylinderGeometry(0.36, 0.36, 0.25, 14), WM = std(0x111111), HUB = std(0xbbbbbb, { metalness: 0.7 });
+function wheels(g, xs, z, r = 0.36) { for (const x of xs) for (const s of [-1, 1]) { const w = new THREE.Mesh(WHEEL, WM); w.scale.set(r / 0.36, 1, r / 0.36); w.rotation.x = Math.PI / 2; w.position.set(x, r, s * z); w.castShadow = true; g.add(w); const h = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.45, r * 0.45, 0.27, 8), HUB); h.rotation.x = Math.PI / 2; h.position.copy(w.position); g.add(h); } }
 function makeCar(c) {
-  const g = new THREE.Group(); const b = box(4.4, 0.9, 1.9, std(c, { metalness: 0.4, roughness: 0.35 })); b.position.y = 0.75; g.add(b);
-  const t = box(2.3, 0.7, 1.7, std(0x223344, { metalness: 0.2, roughness: 0.2 })); t.position.set(-0.2, 1.5, 0); g.add(t); return g;
+  const g = new THREE.Group(); const b = box(4.4, 0.8, 1.9, std(c, { metalness: 0.4, roughness: 0.35 })); b.position.y = 0.8; g.add(b);
+  const t = box(2.3, 0.7, 1.7, std(0x223344, { metalness: 0.2, roughness: 0.2 })); t.position.set(-0.2, 1.5, 0); g.add(t);
+  for (const z of [-0.6, 0.6]) { const l = box(0.05, 0.18, 0.35, std(0xfff6cc, { emissive: 0xfff2b0, emissiveIntensity: 0.6 })); l.position.set(2.21, 0.95, z); g.add(l); }
+  wheels(g, [-1.4, 1.4], 0.86); return g;
 }
+function makeBus() { const g = new THREE.Group(); const b = box(11, 2.6, 2.5, std(0x1e8449)); b.position.y = 1.9; g.add(b); const w = box(10.4, 0.8, 2.55, std(0x223344, { roughness: 0.2 })); w.position.y = 2.4; g.add(w); wheels(g, [-3.8, 3.6], 1.1, 0.5); return g; }
+function makeBike(c) { const g = new THREE.Group(); const b = box(1.8, 0.5, 0.35, std(c)); b.position.y = 0.7; g.add(b); const r = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.7, 6), std(0x2b3a55)); r.position.set(-0.1, 1.25, 0); g.add(r); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), std(0xd62828)); hd.position.set(-0.1, 1.75, 0); g.add(hd); wheels(g, [-0.65, 0.65], 0.0, 0.3); return g; }
+function makeTree(h) { const g = new THREE.Group(); const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, h * 0.45, 6), std(0x6b4a2b)); tr.position.y = h * 0.22; g.add(tr);
+  const cr = new THREE.Mesh(new THREE.IcosahedronGeometry(h * 0.33, 0), std([0x3f8f3a, 0x4f9a3f, 0x2f7a35, 0x5a9e45, 0x3c8448][Math.floor(Math.random() * 5)])); cr.position.y = h * 0.62; cr.scale.y = 1.15; g.add(cr); g.traverse(o => { if (o.isMesh) o.castShadow = true; }); return g; }
+const LAMP = std(0xfff3c4, { emissive: 0xffe08a, emissiveIntensity: 0 });
+function makeLamp() { const g = new THREE.Group(); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 8, 6), std(0x777f88, { metalness: 0.5 })); p.position.y = 4; g.add(p);
+  const a = box(1.6, 0.1, 0.12, std(0x777f88)); a.position.set(0.7, 7.9, 0); g.add(a); const l = box(0.6, 0.15, 0.3, LAMP); l.position.set(1.4, 7.8, 0); g.add(l); return g; }
 // luoi thep: InstancedMesh cac thanh mong
 function rebarGrid(b, y, step = 0.5) {
   const nx = Math.floor((b.max.x - b.min.x) / step), nz = Math.floor((b.max.z - b.min.z) / step);
@@ -86,13 +97,28 @@ export function buildExtras(scene, items, C) {
   const along = (u, lane = 0) => { let d = ((u % 1) + 1) % 1 * per; const back = lane > 0;
     if (back) d = per - d; const o = back ? -1.8 : 1.8;
     if (d < LA) return [R.x1 + 25 - d, R.z1 + o, back ? 0 : Math.PI]; d -= LA; return [R.x0 + o, R.z1 - d, back ? -Math.PI / 2 : Math.PI / 2]; };
+  // cay xanh + den duong doc tuyen duong chu L, nha lan can phia ngoai duong
+  const decor = new THREE.Group(); scene.add(decor);
+  for (let d = 0; d < per; d += 12) { const [x, z, a] = along(d / per, 0); const n = new THREE.Vector3(Math.sin(a + Math.PI / 2), 0, Math.cos(a + Math.PI / 2));
+    for (const sd of [-1, 1]) { const tr = makeTree(5 + Math.random() * 3); tr.position.set(x + n.x * sd * 8.5, 0, z + n.z * sd * 8.5); decor.add(tr); }
+    const out = (C.x - (x + n.x)) ** 2 + (C.z - (z + n.z)) ** 2 > (C.x - (x - n.x)) ** 2 + (C.z - (z - n.z)) ** 2 ? 1 : -1;
+    if ((d / 12) % 2 === 0) { const lp = makeLamp(); lp.position.set(x + n.x * 6.5 * out, 0, z + n.z * 6.5 * out); lp.rotation.y = a + (out > 0 ? Math.PI / 2 : -Math.PI / 2); decor.add(lp); } }
+  const bcol = [0xe8dcc8, 0xd6e4f0, 0xf2e6d0, 0xcfd8dc, 0xf0d9c5, 0xdfe6d8];
+  for (let d = 10; d < per - 10; d += 22) { const [x, z, a] = along(d / per, 0); const n = new THREE.Vector3(Math.sin(a + Math.PI / 2), 0, Math.cos(a + Math.PI / 2));
+    const out = (C.x - (x + n.x)) ** 2 + (C.z - (z + n.z)) ** 2 > (C.x - (x - n.x)) ** 2 + (C.z - (z - n.z)) ** 2 ? 1 : -1;
+    const h = 6 + Math.floor(Math.random() * 3) * 3.3; const b = box(16, h, 12, std(bcol[(d / 22 | 0) % bcol.length])); b.position.set(x + n.x * 26 * out, h / 2, z + n.z * 26 * out); b.rotation.y = a; b.receiveShadow = true; decor.add(b);
+    const roof = box(16.4, 0.4, 12.4, std(0x8d6e63)); roof.position.set(b.position.x, h + 0.2, b.position.z); roof.rotation.y = a; decor.add(roof); }
+  const bus = makeBus(); scene.add(bus); const bikes = [0x1565c0, 0xc62828, 0x2e7d32, 0x212121, 0xf9a825, 0x6a1b9a].map(c => { const b = makeBike(c); scene.add(b); return b; });
   // tang dang thi cong (cao do de dat cong nhan)
   const lvl = t => { let y = 0; for (const f of ["20", "21", "23", "25", "27", "29"]) { const it = get(f); if (it && t >= it.on) y = it.box.max.y; } return y; };
 
-  return function update(t, sec) {
+  return function update(t, sec, env = { working: true, night: false, rain: false }) {
+    LAMP.emissiveIntensity = env.night || env.rain ? 2.2 : 0;
+    { const [x, z, a] = along(0.3 + sec * 0.012, 1); bus.position.set(x, 0, z); bus.rotation.y = a; }
+    bikes.forEach((b, i) => { const [x, z, a] = along(i / 6 + sec * 0.045, i % 2); b.position.set(x, 0, z + (i % 3 - 1) * 0.6); b.rotation.y = a; });
     for (const p of parts) p.o.visible = inW(t, p.a, p.b);
     // may khoan coc
-    const drill = inW(t, "2027-02-22", "2027-03-28");
+    const drill = inW(t, "2027-02-22", "2027-03-28"); const dd = new Date(t).getDay();
     rigs.forEach((r, i) => { r.visible = drill; if (!drill) return; const u = (t - D("2027-02-22")) / (35 * DAY);
       const gx = i % 3, gz = Math.floor(i / 3); r.position.set(bld.min.x + 5 + (gx + u) * (bld.max.x - bld.min.x - 10) / 3, 0, bld.min.z + 6 + gz * (bld.max.z - bld.min.z - 12) + Math.sin(sec + i) * 0.5); });
     // xe bom
@@ -108,7 +134,7 @@ export function buildExtras(scene, items, C) {
     // o to
     cars.forEach((c, i) => { const [x, z, a] = along(c.s + sec * 0.03, i % 2); c.o.position.set(x, 0, z); c.o.rotation.y = a; });
     // cong nhan: tren tang dang thi cong; mat bang chuan bi: tren nen
-    const active = t >= D("2027-02-15") && t < D("2027-12-11"); const y = t < D("2027-04-19") ? 0 : lvl(t);
+    const active = env.working && t >= D("2027-02-15") && t < D("2027-12-11"); const y = t < D("2027-04-19") ? 0 : lvl(t);
     workers.forEach((w, i) => { w.o.visible = active; if (!active) return;
       const ang = w.s + sec * w.r * 0.5; const gx = (i % 6 + 0.5) / 6, gz = (Math.floor(i / 6) + 0.5) / 6;
       w.o.position.set(bld.min.x + gx * (bld.max.x - bld.min.x) + Math.cos(ang) * 1.5, y + Math.abs(Math.sin(sec * 6 + i)) * 0.05, bld.min.z + gz * (bld.max.z - bld.min.z) + Math.sin(ang) * 1.5);
