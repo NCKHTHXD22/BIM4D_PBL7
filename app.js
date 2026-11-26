@@ -4,6 +4,7 @@ import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { GROUPS, PLASTER, SCENES, SCENE_SEC } from "./schedule.js";
+import { buildExtras } from "./extras.js";
 
 const REC = new URLSearchParams(location.search).has("record");
 if (REC) document.body.classList.add("rec");
@@ -16,7 +17,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffe
 renderer.setPixelRatio(REC ? 1 : Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.55;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.8;
 document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.5, 4000);
@@ -50,17 +51,18 @@ const items = []; let loaded = 0; const lp = document.getElementById("lp");
 const box = new THREE.Box3();
 await Promise.all(GROUPS.map(g => new Promise(res => loader.load("./models/" + g.f + ".glb", gl => {
   const m = gl.scene; m.rotation.x = -Math.PI / 2; m.scale.setScalar(0.3048);
-  m.traverse(o => { if (o.isMesh) { o.castShadow = g.style !== "scaffold"; o.receiveShadow = true; if (g.style !== "orig") o.material = MAT[g.style]; else if (o.material) { for (const mm of [].concat(o.material)) { mm.side = THREE.DoubleSide; mm.flatShading = true; mm.vertexColors = false; mm.needsUpdate = true; } } } });
+  m.traverse(o => { if (o.isMesh) { o.castShadow = g.style !== "scaffold"; o.receiveShadow = true; if (g.style !== "orig") o.material = MAT[g.style]; else if (o.material) { for (const mm of [].concat(o.material)) { mm.side = THREE.DoubleSide; mm.flatShading = true; mm.vertexColors = false; mm.roughness = 0.8; if (mm.name === "GLASS") { mm.transparent = true; mm.opacity = 0.35; mm.depthWrite = false; mm.metalness = 0.3; mm.roughness = 0.1; } mm.needsUpdate = true; } } } });
   m.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(m);
   const holder = new THREE.Group(); holder.position.y = b.min.y; m.position.y -= b.min.y; holder.add(m); scene.add(holder);
   if (["17", "20", "21", "23", "25", "27"].includes(g.f)) box.union(b);
-  items.push({ g, holder, on: g.on ? D(g.on) : null, dur: (g.d || 1) * DAY, off: g.off ? D(g.off) : null });
+  items.push({ g, holder, box: b.clone(), on: g.on ? D(g.on) : null, dur: (g.d || 1) * DAY, off: g.off ? D(g.off) : null });
   lp.textContent = ++loaded + "/" + GROUPS.length; res();
 }, undefined, () => { lp.textContent = ++loaded + "/" + GROUPS.length + " (thiếu " + g.f + ")"; res(); }))));
 document.getElementById("load").remove();
 const C = box.getCenter(new THREE.Vector3()); C.y = 6;
 sun.target.position.copy(C); sun.position.copy(C).addScaledVector(sunDir, 200);
 camera.position.set(C.x + 110, 70, C.z + 110); controls.target.copy(C);
+const extras = buildExtras(scene, items, C); let curT = T0;
 
 // --- trang thai theo ngay
 const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
@@ -72,7 +74,7 @@ function setDate(t) {
     it.holder.visible = s > 0.002; it.holder.scale.y = Math.max(s, 0.002);
   }
   MAT.brick.color.copy(BRICK).lerp(PLAST, ease((t - D(PLASTER.from)) / (D(PLASTER.to) - D(PLASTER.from))));
-  document.getElementById("date").textContent = fmt(t);
+  document.getElementById("date").textContent = fmt(t); curT = t;
 }
 function sceneAt(t) { let k = 0; SCENES.forEach((s, i) => { if (D(s.d0) <= t) k = i; }); return k; }
 function setSub(i, t) { const s = SCENES[i]; document.getElementById("sub").innerHTML = s.t + "<small>" + (s.d0 === s.d1 ? fmt(D(s.d0)) : fmt(D(s.d0)) + " - " + fmt(D(s.d1))) + "</small>"; }
@@ -85,7 +87,7 @@ window.VIDEO = { total: TOTAL, renderAt(sec) {
   const t = D(s.d0) + (D(s.d1) - D(s.d0)) * Math.min(1, u / 0.85);
   setDate(t); setSub(i, t);
   const c = s.c0.map((a, k) => a + (s.c1[k] - a) * ease(u)); camAt(c);
-  renderer.render(scene, camera); return true; } };
+  extras(t, sec); renderer.render(scene, camera); return true; } };
 
 // --- giao dien web
 let cur = T0, playing = false;
@@ -101,7 +103,7 @@ let last = performance.now();
 function loop(now) {
   if (!REC) { requestAnimationFrame(loop);
     if (playing) { cur = Math.min(T1, cur + (now - last) / 1000 * 2 * DAY); slider.value = (cur - T0) / (T1 - T0) * 1000; setDate(cur); setSub(sceneAt(cur), cur); if (cur >= T1) document.getElementById("play").click(); }
-    controls.update(); renderer.render(scene, camera); }
+    extras(curT, now / 1000); controls.update(); renderer.render(scene, camera); }
   last = now;
 }
 requestAnimationFrame(loop);
