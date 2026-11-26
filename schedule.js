@@ -12,7 +12,7 @@ export const GROUPS = [
   { f: "13", name: "Cổ cột", style: "concrete", on: "2027-04-10", d: 4 },
   { f: "14", name: "Lấp đất, sàn nền", style: "concrete", on: "2027-04-15", d: 3 },
   { f: "04", name: "Cần trục tháp", style: "orig", on: "2027-04-17", d: 2, off: "2027-09-04" },
-  { f: "15", name: "Cốt thép cột T1", style: "rebar", on: "2027-04-19", d: 3 },
+  { f: "15", name: "Cốt thép cột T1", style: "rebar", on: "2027-04-19", d: 3, off: "2027-04-26" },
   { f: "16", name: "Ván khuôn cột T1", style: "formwork", on: "2027-04-20", d: 3, off: "2027-04-26" },
   { f: "17", name: "Bê tông cột T1", style: "concrete", on: "2027-04-23", d: 2 },
   { f: "18", name: "Ván khuôn dầm sàn T1", style: "formwork", on: "2027-04-26", d: 6, off: "2027-06-07" },

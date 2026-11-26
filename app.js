@@ -27,7 +27,7 @@ const sunDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.deg
 su.sunPosition.value.copy(sunDir);
 scene.add(new THREE.HemisphereLight(0xdfefff, 0x8a7a60, 1.1));
 const sun = new THREE.DirectionalLight(0xfff2dd, 3.2); sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 90, bottom: -90, near: 1, far: 400 }); sun.shadow.bias = -0.0004;
+sun.shadow.mapSize.set(REC ? 2048 : 4096, REC ? 2048 : 4096); Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 90, bottom: -90, near: 1, far: 400 }); sun.shadow.bias = -0.0004;
 scene.add(sun, sun.target);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ color: 0xcdb892, roughness: 1 }));
 ground.rotation.x = -Math.PI / 2; ground.position.y = -1.0; ground.receiveShadow = true; scene.add(ground);
