@@ -3,7 +3,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
-import { GROUPS, PLASTER, SCENES, SCENE_SEC } from "./schedule.js";
+import { GROUPS, PLASTER, PAINT, SCENES, SCENE_SEC } from "./schedule.js";
 import { buildExtras } from "./extras.js";
 
 const $ = id => document.getElementById(id);
@@ -56,6 +56,7 @@ const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0
 const MAT = { concrete: M(0xc9c6c0, { roughness: 0.95 }), rebar: M(0x9c3d1c, { roughness: 0.5, metalness: 0.6 }), formwork: M(0xc8913f, { roughness: 0.8 }),
   scaffold: M(0x3aa35c, { transparent: true, opacity: 0.55, roughness: 0.7, depthWrite: false, side: THREE.DoubleSide }), brick: M(0xb5522e, { roughness: 0.95 }), ceiling: M(0xf2f2ee), finish: M(0xd9d4c8, { roughness: 0.6 }) };
 const BRICK = new THREE.Color(0xb5522e), PLAST = new THREE.Color(0xefe9df);
+const YEL = new THREE.Color(PAINT.wall), CONC = new THREE.Color(0xc9c6c0), WHT = new THREE.Color(PAINT.frame);
 const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
 const items = []; let loaded = 0; const box = new THREE.Box3();
 await Promise.all(GROUPS.map(g => new Promise(res => loader.load("./models/" + g.f + ".glb", gl => {
@@ -89,7 +90,9 @@ function applyTime(t, sec) {
     if (it.off !== null && d >= it.off) s = 1 - ease((d - it.off) / DAY);
     it.holder.visible = it.user && s > 0.002; it.holder.scale.y = Math.max(s, 0.002);
   }
-  MAT.brick.color.copy(BRICK).lerp(PLAST, ease((d - D(PLASTER.from)) / (D(PLASTER.to) - D(PLASTER.from))));
+  const pt = ease((d - D(PAINT.from)) / (D(PAINT.to) - D(PAINT.from)));
+  MAT.brick.color.copy(BRICK).lerp(PLAST, ease((d - D(PLASTER.from)) / (D(PLASTER.to) - D(PLASTER.from)))).lerp(YEL, pt);
+  MAT.concrete.color.copy(CONC).lerp(WHT, pt);
   const wet = isRain(t), el = Math.sin(Math.PI * (hr - 6) / 12) * 68, az = 90 + (hr - 6) / 12 * 180;
   const dir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - el), THREE.MathUtils.degToRad(az));
   su.sunPosition.value.copy(dir); su.turbidity.value = wet ? 18 : 6; su.rayleigh.value = wet ? 0.6 : 1.6;

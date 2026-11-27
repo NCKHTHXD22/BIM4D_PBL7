@@ -227,6 +227,38 @@ export function buildExtras(scene, items, C) {
   house(-60, 66, 18, 16, 13.5);                                                                                                                     // nha goc nga tu
   for (let x = -14; x < 58;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 4; house(x + w / 2, -42 - d / 2, w, d, H3()); x += w + 6 + rnd() * 6; }      // phia bac
   for (let z = 20; z > -50;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 4; house(64 + d / 2, z - w / 2, d, w, H3()); z -= w + 6 + rnd() * 6; }       // phia dong
+  // ================= SAN VUON sau khi thao do cong trinh tam (tu 09/12): co, loi di, cay xanh, bon hoa, bui cay
+  const land = new THREE.Group(); land.visible = false; scene.add(land);
+  const fb = bb("01") || new THREE.Box3(new THREE.Vector3(-20, 0, -23), new THREE.Vector3(51, 0, 30));
+  const F = { x0: fb.min.x + 0.6, x1: fb.max.x - 0.6, z0: fb.min.z + 0.6, z1: fb.max.z - 0.6 };
+  const pad = (x0, x1, z0, z1, y, c) => { if (x1 <= x0 || z1 <= z0) return; const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.12, z1 - z0), std(c, { roughness: 1 })); m.position.set((x0 + x1) / 2, y - 0.06, (z0 + z1) / 2); m.receiveShadow = true; land.add(m); };
+  const B = { x0: bld.min.x - 2.5, x1: bld.max.x + 2.5, z0: bld.min.z - 2.5, z1: bld.max.z + 2.5 };
+  const GRASS = 0x5e9b3e, PAVE = 0xd6cfc0, YARD = 0xc2bcae;
+  pad(F.x0, F.x1, F.z0, F.z1, GL + 0.05, GRASS);                                   // co phu toan khu dat
+  pad(B.x0, B.x1, B.z0, B.z1, GL + 0.08, PAVE);                                    // loi di bao quanh nha rong 2,5 m
+  pad(F.x0, F.x1, B.z1, F.z1, GL + 0.09, YARD);                                    // san truoc phia nam (giap duong chinh)
+  pad(B.x1 + 6, F.x1, F.z0 + 2, F.z0 + 14, GL + 0.09, 0x8f8d88);                   // bai do xe phia dong
+  for (let z = F.z0 + 2.5; z < F.z0 + 14; z += 2.6) { const l = new THREE.Mesh(new THREE.BoxGeometry(5, 0.02, 0.1), DASH); l.position.set(F.x1 - 2.6, GL + 0.1, z); land.add(l); }
+  const ltree = (x, z, h = 5 + Math.random() * 3) => { const t = makeTree(h); t.position.set(x, GL + 0.05, z); land.add(t); };
+  const BUSH = [std(0x2f6f2a), std(0x3d7f33), std(0x4a8a3a)], FLW = [std(0xe94f64), std(0xf5d33a), std(0xf08bd0), std(0xffffff)];
+  const bush = (x, z, r = 0.7) => { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), BUSH[Math.floor(Math.random() * 3)]); b.position.set(x, GL + 0.05 + r * 0.7, z); b.castShadow = true; land.add(b); };
+  const bed = (x, z, r = 1.6) => { const s = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.35, 16), std(0x9c8f7a)); s.position.set(x, GL + 0.2, z); land.add(s);
+    const sl = new THREE.Mesh(new THREE.CylinderGeometry(r - 0.12, r - 0.12, 0.05, 16), std(0x4e3b28)); sl.position.set(x, GL + 0.38, z); land.add(sl);
+    for (let k = 0; k < 14; k++) { const a = k * 2.4, rr = (r - 0.35) * Math.sqrt((k + 0.5) / 14); const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 0), FLW[k % 4]); f.position.set(x + Math.cos(a) * rr, GL + 0.55, z + Math.sin(a) * rr); land.add(f); } };
+  // hang cay sat hang rao (bac, dong, tay) va hang cay tren via he ngoai cong
+  for (let x = F.x0 + 1.5; x < F.x1; x += 7) ltree(x, F.z0 + 1.6);
+  for (let z = F.z0 + 17; z < B.z1 - 1; z += 7) ltree(F.x1 - 1.6, z);
+
+  for (let x = fb.min.x + 4; x < fb.max.x; x += 10) ltree(x, 31.7);
+  for (let z = fb.min.z + 4; z < fb.max.z; z += 10) ltree(-22, z);
+  // vuon hoa phia dong (thay cho khu lan trai cu) + bui cay vien loi di
+  for (let i = 0; i < 9; i++) ltree(B.x1 + 4 + (i % 3) * 5.5 + Math.random(), F.z0 + 18 + Math.floor(i / 3) * 7 + Math.random());
+  bed(B.x1 + 11, B.z1 - 4); bed((B.x0 + B.x1) / 2 - 10, (B.z1 + F.z1) / 2, 1.8); bed((B.x0 + B.x1) / 2 + 10, (B.z1 + F.z1) / 2, 1.8);
+  for (let x = B.x0 + 1; x < B.x1; x += 3.2) { bush(x, B.z0 - 0.8); } for (let z = B.z0 + 1; z < B.z1; z += 3.2) { bush(B.x1 + 0.8, z); bush(B.x0 - 0.8, z, 0.55); }
+  // ghe da + cot co truoc san
+  for (const [x, z] of [[B.x1 + 6, B.z1 - 8], [B.x1 + 12, B.z1 - 10], [B.x1 + 8, F.z0 + 22]]) { const s = box(1.8, 0.45, 0.5, std(0x8d8478)); s.position.set(x, GL + 0.3, z); land.add(s); }
+  { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 11, 8), std(0xdddddd, { metalness: 0.6 })); p.position.set(F.x0 + 6, GL + 5.5, F.z1 - 2); land.add(p);
+    const fl = box(2.4, 1.6, 0.04, std(0xd62828)); fl.position.set(F.x0 + 7.25, GL + 10.1, F.z1 - 2); land.add(fl); }
   // phuong tien
   const cars = []; const cols = [0xc0392b, 0xecf0f1, 0x2c3e50, 0x2980b9, 0x7f8c8d, 0xf1c40f, 0x16a085, 0x8e44ad];
   for (let i = 0; i < 10; i++) { const c = makeCar(cols[i % 8]); scene.add(c); cars.push({ o: c, s: i / 10 }); }
@@ -271,6 +303,7 @@ export function buildExtras(scene, items, C) {
       if (i < 2) { e.position.set(Math.min(front + 4.5, top.x1 + 3), GL, top.z0 + (top.z1 - top.z0) * (i ? 0.72 : 0.28)); e.rotation.y = Math.PI; digPose(e, ph, Math.PI); }
       else if (fillM) { e.position.set(bot.x0 + 4 + (bot.x1 - bot.x0 - 8) * ((uF * 3) % 1), fy, bot.z1 - 4); e.rotation.y = Math.PI / 2; digPose(e, ph, Math.PI / 2); }
       else { e.position.set(bot.x0 + 4 + (bot.x1 - bot.x0 - 8) * uH, PF, bot.z0 + 3); e.rotation.y = -Math.PI / 2; digPose(e, ph, Math.PI / 2); } });
+    land.visible = t >= D("2027-12-09");
     sheet.visible = t >= D("2027-03-26") && t < T.fill1; waler.visible = t >= T.dig && t < T.fill0;
     loadT.forEach((tr, i) => { tr.visible = digM; if (digM) { tr.position.set(Math.min(front + 13, top.x1 + 11), GL, top.z0 + (top.z1 - top.z0) * (i ? 0.72 : 0.28)); tr.userData.soil.visible = ((sec * 0.11 + i * 0.37) % 1) > 0.6; } });
     // ---- ghi chu chi tiet phan ngam

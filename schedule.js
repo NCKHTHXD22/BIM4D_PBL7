@@ -37,6 +37,8 @@ export const GROUPS = [
 ];
 // Trat tuong: doi mau gach -> vua trat
 export const PLASTER = { from: "2027-08-02", to: "2027-10-06" };
+// Son tuong mau vang (ID 87: 12/10 -> 27/11); khung BT son trang kem
+export const PAINT = { from: "2027-10-12", to: "2027-11-27", wall: 0xf4cd5c, frame: 0xf3efe6 };
 // Canh video (ngay tang dan). cam: [goc phuong vi do, goc nang do, khoang cach m] dau -> cuoi
 export const SCENES = [
   { t: "Dựng hàng rào, cổng ngõ", d0: "2027-02-15", d1: "2027-02-15", c0: [205, 42, 150], c1: [235, 40, 135] },
