@@ -164,6 +164,17 @@ let playing = false; const slider = $("slider");
 function setT(t) { curT = Math.max(T0 - 7 * H, Math.min(T1, t)); slider.value = (curT - T0) / (T1 - T0) * 10000; applyTime(curT, performance.now() / 1000); updateInfo(curT); setSub(sceneAt(curT)); $("clock").textContent = THU[new Date(curT).getDay()] + " " + fmt(curT) + " · " + $("iTime").textContent; }
 slider.oninput = () => setT(day0(T0 + (T1 - T0) * slider.value / 10000) + 9 * H);
 $("play").onclick = () => { playing = !playing; $("play").textContent = playing ? "⏸ Dừng" : "▶ Chạy"; $("play").classList.toggle("on", playing); if (curT >= T1) setT(T0); };
+// toc do: nut cham/nhanh, phim [ ] va Space, bo qua dem & ngay nghi
+const spdSel = $("speed"), speed = () => +spdSel.value, skipOn = () => $("skip").checked && speed() < 24;
+function stepSpeed(k) { spdSel.selectedIndex = Math.max(0, Math.min(spdSel.options.length - 1, spdSel.selectedIndex + k)); showEta(); }
+let WORKDAYS = 0; for (let d = day0(T0); d <= T1; d += DAY) if (!holiday(d + 9 * H)) WORKDAYS++;
+function showEta() { const hrs = skipOn() ? WORKDAYS * 10 : (T1 - T0) / H, s = hrs / speed(); $("eta").textContent = "≈ " + (s >= 60 ? Math.round(s / 60) + " phút" : Math.round(s) + " giây") + " cho cả tiến độ"; }
+function skipOff(t) { for (let i = 0; i < 20; i++) { const h = (t - day0(t)) / H;
+  if (holiday(t) || h >= 17) { t = day0(t) + DAY + 7 * H; continue; } if (h < 7) t = day0(t) + 7 * H; break; } return t; }
+$("slow").onclick = () => stepSpeed(-1); $("fast").onclick = () => stepSpeed(1); spdSel.onchange = $("skip").onchange = showEta; showEta();
+addEventListener("keydown", e => { if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (e.code === "BracketLeft") stepSpeed(-1); else if (e.code === "BracketRight") stepSpeed(1);
+  else if (e.code === "Space") { e.preventDefault(); if (e.target.tagName !== "BUTTON") $("play").click(); } });
 $("prevD").onclick = () => setT(curT - DAY); $("nextD").onclick = () => setT(curT + DAY);
 $("vOver").onclick = () => setMode("over"); $("vSup").onclick = () => setMode("sup");
 $("zin").onclick = () => { if (mode === "over") camera.position.lerp(controls.target, 0.25); else camera.position.addScaledVector(fwd(), 3); };
@@ -193,7 +204,7 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   if (!REC) { requestAnimationFrame(loop);
-    if (playing) { const nt = curT + dt * (+$("speed").value) * H; if (nt >= T1) $("play").click(); setT(nt); } else applyTime(curT, now / 1000);
+    if (playing) { let nt = curT + dt * speed() * H; if (skipOn()) nt = skipOff(nt); if (nt >= T1) $("play").click(); setT(nt); } else applyTime(curT, now / 1000);
     if (mode === "sup") supStep(dt); else controls.update();
     renderer.render(scene, camera); }
 }

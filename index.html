@@ -22,6 +22,9 @@ canvas{display:block}
 #ui button.on{background:#e67e22}
 #row1{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 #clock{font:bold 16px Arial;min-width:230px}
+.spd{display:inline-flex;align-items:center;background:#16233a;border-radius:8px;padding:0 2px}
+#ui .spd button{background:#2e7d32}
+#skipL{font-size:12px;cursor:pointer;user-select:none}#eta{font-size:12px;color:#9fc3ff}
 #slider{width:100%;margin-top:4px}
 #panel{position:fixed;left:12px;top:90px;width:360px;max-height:calc(100% - 220px);overflow:auto;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:8px 10px;font-size:13px;display:none}
 #panel .tabs button{background:#2d3b55;color:#fff;border:0;border-radius:6px;padding:5px 10px;margin-right:4px;cursor:pointer}
@@ -59,7 +62,8 @@ body.rec #sub{bottom:auto;top:16px;left:auto;right:24px;transform:none;text-alig
 <div id="ui">
   <div id="row1">
     <button id="play">▶ Chạy</button>
-    <select id="speed" title="Tốc độ"><option value="1">1 giờ / giây</option><option value="6">6 giờ / giây</option><option value="24" selected>1 ngày / giây</option><option value="120">5 ngày / giây</option><option value="480">20 ngày / giây</option></select>
+    <span class="spd"><button id="slow" title="Chậm hơn (phím [ )">🐢 Chậm</button><select id="speed" title="Tốc độ mô phỏng"><option value="0.25">15 phút / giây</option><option value="0.5">30 phút / giây</option><option value="1">1 giờ / giây</option><option value="2">2 giờ / giây</option><option value="3" selected>3 giờ / giây</option><option value="6">6 giờ / giây</option><option value="12">12 giờ / giây</option><option value="24">1 ngày / giây</option><option value="48">2 ngày / giây</option><option value="120">5 ngày / giây</option><option value="240">10 ngày / giây</option><option value="480">20 ngày / giây</option></select><button id="fast" title="Nhanh hơn (phím ] )">Nhanh 🐇</button></span>
+    <label id="skipL" title="Khi chạy dưới 1 ngày/giây: tự nhảy qua ban đêm, Chủ nhật và ngày lễ"><input type="checkbox" id="skip" checked> Bỏ qua đêm &amp; ngày nghỉ</label><span id="eta"></span>
     <button id="prevD">◀ Ngày</button><button id="nextD">Ngày ▶</button>
     <span id="clock"></span>
     <button id="vOver" class="on">🛰 Tổng quan</button><button id="vSup">👷 Giám sát</button>

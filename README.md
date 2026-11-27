@@ -5,7 +5,7 @@
 Trang web Three.js mô phỏng tiến độ thi công theo `TienDo_ToanBo_nhom1_v2` (15/02/2027 → 13/12/2027).
 Mô hình xuất từ Revit (`CKBIM_v2_R2025.rvt`) → FBX → GLB (instancing + meshopt).
 
-- **▶ Chạy** + chọn tốc độ (1 giờ/giây → 20 ngày/giây), **◀ Ngày / Ngày ▶**, thanh thời gian
+- **▶ Chạy** (phím Space) · **🐢 Chậm / Nhanh 🐇** (phím [ ]) 12 mức từ 15 phút/giây → 20 ngày/giây, mặc định 3 giờ/giây · **Bỏ qua đêm & ngày nghỉ** · **◀ Ngày / Ngày ▶**, thanh thời gian
 - Bảng **Thông tin thi công**: ngày, giờ, thời tiết, ngày nghỉ, công việc đang làm (% hoàn thành, nhân công)
 - **🛰 Tổng quan** (chuột xoay/zoom) · **👷 Giám sát** (W/A/S/D, kéo chuột, Q/E lên xuống tầng)
 - **☰ Chi tiết hạng mục**: danh sách công việc theo tiến độ, bật/tắt từng hạng mục 3D
