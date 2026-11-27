@@ -130,7 +130,26 @@ export function buildExtras(scene, items, C) {
   const all = [...ftR, ...bmR];
   const bot = all.length ? { x0: Math.min(...all.map(r => r.x0)) - 0.8, x1: Math.max(...all.map(r => r.x1)) + 0.8, z0: Math.min(...all.map(r => r.z0)) - 0.8, z1: Math.max(...all.map(r => r.z1)) + 0.8 }
     : { x0: bld.min.x, x1: bld.max.x, z0: bld.min.z, z1: bld.max.z };
-  const sl = 0.5 * (GL - PF), top = { x0: bot.x0 - sl, x1: bot.x1 + sl, z0: bot.z0 - sl, z1: bot.z1 + sl };   // mai doc 1:0,5
+  // mai doc 1:0,5 o 3 phia; phia nam (sat kho bai) dung tuong cu Larsen thang dung
+  const sl = 0.5 * (GL - PF), top = { x0: bot.x0 - sl, x1: bot.x1 + sl, z0: bot.z0 - sl, z1: bot.z1 };
+  // ---- bo tri lai cong trinh tam cua TMB Revit dang nam trong pham vi ho mong / mat bang nha
+  const NF = s => s.normalize("NFC");
+  const meshesOf = (f, key) => { const it = get(f), out = []; if (!it) return out; it.holder.updateMatrixWorld(true); it.holder.traverse(o => { if (o.isMesh && NF(o.name).includes(NF(key))) out.push(o); }); return out; };
+  const elBox = list => { const b = new THREE.Box3(), m = new THREE.Matrix4(); for (const o of list) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); const n = o.isInstancedMesh ? o.count : 1;
+    for (let k = 0; k < n; k++) { if (o.isInstancedMesh) { o.getMatrixAt(k, m); m.premultiply(o.matrixWorld); } else m.copy(o.matrixWorld); b.union(o.geometry.boundingBox.clone().applyMatrix4(m)); } } return b; };
+  const moveBy = (list, dx, dz) => { const T = new THREE.Matrix4().makeTranslation(dx, 0, dz), m = new THREE.Matrix4(), w = new THREE.Matrix4(), wi = new THREE.Matrix4();
+    for (const o of list) { if (o.isInstancedMesh) { w.copy(o.matrixWorld); wi.copy(w).invert(); for (let k = 0; k < o.count; k++) { o.getMatrixAt(k, m); m.premultiply(w).premultiply(T).premultiply(wi); o.setMatrixAt(k, m); } o.instanceMatrix.needsUpdate = true; o.computeBoundingSphere(); o.computeBoundingBox(); }
+      else { m.copy(o.matrixWorld).premultiply(T).premultiply(wi.copy(o.parent.matrixWorld).invert()); m.decompose(o.position, o.quaternion, o.scale); o.updateMatrixWorld(true); } } };
+  const fz = bb("01") ? [bb("01").min.z, bb("01").max.z] : [-23, 30];
+  // nha xe cong nhan, bai cat, xuong thep: chuyen ra khu dat trong phia bac (sau hang rao); nha bao ve, bai thep, bai gach: lui sat hang rao nam
+  for (const [f, key] of [["02", "Nơi_để_xe_công_nhân"], ["03", "Bãi_cát"], ["03", "Xưởng_gia_công_cốt_thép"]]) { const l = meshesOf(f, key); if (l.length) moveBy(l, 0, fz[0] - 1.5 - elBox(l).max.z); }
+  for (const [f, key] of [["02", "Nhà_bảo_vệ"], ["03", "Bãi_chứa_thép_cây"], ["03", "Bãi_gạch_xây"]]) { const l = meshesOf(f, key); if (!l.length) continue; const b = elBox(l);
+    const dz = Math.max(0, Math.min(top.z1 + 0.3 - b.min.z, fz[1] - 0.25 - b.max.z)); if (dz > 0) moveBy(l, 0, dz); }
+  // duong day dien thi cong cat ngang mat bang nha: an doan nam trong ho mong
+  for (const o of meshesOf("03", "Duong_dien_thi_cong")) { const b = elBox([o]); if (b.max.x > top.x0 && b.min.x < top.x1 && b.max.z > top.z0 && b.min.z < top.z1) o.visible = false; }
+  // tuong cu Larsen phia nam
+  const sheet = box(top.x1 - top.x0, GL - PF + 1.6, 0.18, std(0x3d4650, { metalness: 0.6, roughness: 0.5 })); sheet.position.set((top.x0 + top.x1) / 2, (GL + 0.6 + PF - 1) / 2, top.z1 + 0.09); scene.add(sheet);
+  const waler = box(top.x1 - top.x0, 0.35, 0.3, std(0x8a8f96, { metalness: 0.6 })); waler.position.set(sheet.position.x, GL - 0.8, top.z1 - 0.2); scene.add(waler);
   const SOIL = std(0x8a6a45, { roughness: 1, side: THREE.DoubleSide }), SOILF = std(0x6f5536, { roughness: 1, side: THREE.DoubleSide });
   scene.add(pitMesh(bot, top, PF, GL, SOIL, false), pitMesh(bot, top, PF, GL, SOILF, true));
   // khoi dat chua dao (thu hep dan theo tien do dao) + khoi dat lap (dang len dan)
@@ -206,7 +225,7 @@ export function buildExtras(scene, items, C) {
   for (let x = -34; x < XE - 8;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 5; house(x + w / 2, 56 + d / 2, w, d, H3()); x += w + 5 + rnd() * 6; }      // phia nam (ngoai duong)
   for (let z = 38; z > ZE + 8;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 5; house(-46 - d / 2, z - w / 2, d, w, H3()); z -= w + 5 + rnd() * 6; }  // phia tay (ngoai duong)
   house(-60, 66, 18, 16, 13.5);                                                                                                                     // nha goc nga tu
-  for (let x = -14; x < 58;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 4; house(x + w / 2, -38 - d / 2, w, d, H3()); x += w + 6 + rnd() * 6; }      // phia bac
+  for (let x = -14; x < 58;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 4; house(x + w / 2, -42 - d / 2, w, d, H3()); x += w + 6 + rnd() * 6; }      // phia bac
   for (let z = 20; z > -50;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 4; house(64 + d / 2, z - w / 2, d, w, H3()); z -= w + 6 + rnd() * 6; }       // phia dong
   // phuong tien
   const cars = []; const cols = [0xc0392b, 0xecf0f1, 0x2c3e50, 0x2980b9, 0x7f8c8d, 0xf1c40f, 0x16a085, 0x8e44ad];
@@ -250,8 +269,9 @@ export function buildExtras(scene, items, C) {
     exs.forEach((e, i) => { const vis = i < 2 ? digM : (fillM || handM); e.visible = vis; if (!vis) return;
       const ph = env.working ? (sec * 0.11 + i * 0.37) % 1 : 0.05;
       if (i < 2) { e.position.set(Math.min(front + 4.5, top.x1 + 3), GL, top.z0 + (top.z1 - top.z0) * (i ? 0.72 : 0.28)); e.rotation.y = Math.PI; digPose(e, ph, Math.PI); }
-      else if (fillM) { e.position.set(top.x0 + 4 + (top.x1 - top.x0 - 8) * ((uF * 3) % 1), GL, top.z1 + 3.5); e.rotation.y = Math.PI / 2; digPose(e, ph, -Math.PI / 2); }
-      else { e.position.set(top.x0 + 4 + (top.x1 - top.x0 - 8) * uH, GL, top.z0 - 3.5); e.rotation.y = -Math.PI / 2; digPose(e, ph, Math.PI / 2); } });
+      else if (fillM) { e.position.set(bot.x0 + 4 + (bot.x1 - bot.x0 - 8) * ((uF * 3) % 1), fy, bot.z1 - 4); e.rotation.y = Math.PI / 2; digPose(e, ph, Math.PI / 2); }
+      else { e.position.set(bot.x0 + 4 + (bot.x1 - bot.x0 - 8) * uH, PF, bot.z0 + 3); e.rotation.y = -Math.PI / 2; digPose(e, ph, Math.PI / 2); } });
+    sheet.visible = t >= D("2027-03-26") && t < T.fill1; waler.visible = t >= T.dig && t < T.fill0;
     loadT.forEach((tr, i) => { tr.visible = digM; if (digM) { tr.position.set(Math.min(front + 13, top.x1 + 11), GL, top.z0 + (top.z1 - top.z0) * (i ? 0.72 : 0.28)); tr.userData.soil.visible = ((sec * 0.11 + i * 0.37) % 1) > 0.6; } });
     // ---- ghi chu chi tiet phan ngam
     if (t >= T.pile0 - DAY && t < T.pile1 + DAY) note = `🔩 Cọc khoan nhồi D600: đã thi công ${uP >= 1 ? NP : loc * 6}/${NP} cọc · 6 máy khoan (khoan tạo lỗ → hạ lồng thép → đổ BT → rút ống vách)`;
