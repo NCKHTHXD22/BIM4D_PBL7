@@ -307,6 +307,7 @@ export function buildExtras(scene, items, C) {
     if (slabs.length) for (let x = bld.min.x + 1; x < bld.max.x - 1; x += 2.2) for (let z = bld.min.z + 1; z < bld.max.z - 1; z += 2.2) { const y = hy(x, z); if (y === null) continue;
       if ([[1, 0], [-1, 0], [0, 1], [0, -1]].every(([a, b]) => { const yy = hy(x + a, z + b); return yy !== null && Math.abs(yy - y) < 0.25; })) pts.push([x, y, z]); }
     return { from: D(from), pts }; }).filter(l => l.pts.length);
+  const SC_UP = [["2027-05-11", 4.2], ["2027-05-31", 8.4], ["2027-06-19", 12.0], ["2027-07-09", 15.6], ["2027-07-29", 19.2], ["2027-08-10", 22.6], ["2027-08-17", 30]];
   const curLvl = t => { let k = 0; LVL.forEach((l, i) => { if (t >= l.from) k = i; }); return k; };
   const o3 = new THREE.Object3D(), Z0 = new THREE.Matrix4().makeScale(0, 0, 0);
   const T = { pile0: D("2027-02-22") + 7 * H, pile1: D("2027-03-27") + 17 * H, dig: D("2027-03-29"), hand: D("2027-03-31"), lean: D("2027-04-02"), reb: D("2027-04-03"), conc: D("2027-04-08"), fill0: D("2027-04-15") + 7 * H, fill1: D("2027-04-18") + 17 * H };
@@ -346,8 +347,9 @@ export function buildExtras(scene, items, C) {
       else if (fillM) { e.position.set(bot.x0 + 4 + (bot.x1 - bot.x0 - 8) * ((uF * 3) % 1), fy, bot.z1 - 4); e.rotation.y = Math.PI / 2; digPose(e, ph, Math.PI / 2); }
       else { e.position.set(bot.x0 + 4 + (bot.x1 - bot.x0 - 8) * uH, PF, bot.z0 + 3); e.rotation.y = -Math.PI / 2; digPose(e, ph, Math.PI / 2); } });
     land.visible = t >= D("2027-12-09");
-    // gian giao: dung len 17/08-24/08, thao tu tren xuong 30/10-06/11
-    if (tubeM) { const hS = GL + (SH - GL) * ramp(t, D("2027-08-17"), D("2027-08-24") + 17 * H) * (1 - ramp(t, D("2027-10-30"), D("2027-11-06")));
+    // gian giao + luoi bao che: dung dan theo tang tu khi thi cong tang 2 (cao hon san dang thi cong 1,5 m), thao tu tren xuong 30/10-06/11
+    if (tubeM) { let top = GL; for (const [d, y] of SC_UP) { const u = ramp(t, D(d), D(d) + 3 * DAY); const y1 = Math.min(SH, y + 1.5); if (u > 0 && y1 > top) top += (y1 - top) * u; }
+      const hS = GL + (top - GL) * (1 - ramp(t, D("2027-10-30"), D("2027-11-06")));
       scaf.visible = hS > GL + 0.3; if (scaf.visible) { let n = 0; while (n < tubeY.length && tubeY[n] <= hS + 0.01) n++; tubeM.count = n; n = 0; while (n < plankY.length && plankY[n] <= hS) n++; plankM.count = n;
         const nh = Math.max(0.01, Math.min(SH, hS) - GL); for (const m of nets) { m.scale.y = nh; m.material.map.repeat.y = nh / 2; } } }
     sheet.visible = t >= D("2027-03-26") && t < T.fill1; waler.visible = t >= T.dig && t < T.fill0;

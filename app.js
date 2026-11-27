@@ -3,13 +3,13 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
-import { GROUPS, PLASTER, PAINT, SCENES, SCENE_SEC } from "./schedule.js";
-import { buildExtras } from "./extras.js";
+import { GROUPS, PLASTER, PAINT, SCENES, SCENE_SEC } from "./schedule.js?v=20261127c";
+import { buildExtras } from "./extras.js?v=20261127c";
 
 const $ = id => document.getElementById(id);
 const REC = new URLSearchParams(location.search).has("record");
 if (REC) document.body.classList.add("rec");
-const DATA = await (await fetch("./data.json")).json();
+const DATA = await (await fetch("./data.json?v=20261127c")).json();
 const H = 36e5, DAY = 864e5;
 const D = s => new Date(s.length === 8 ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T00:00:00` : s + "T00:00:00").getTime();
 const day0 = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
