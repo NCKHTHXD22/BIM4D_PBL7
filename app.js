@@ -71,6 +71,12 @@ await Promise.all(GROUPS.map(g => new Promise(res => loader.load("./models/" + g
 $("load").remove();
 const C = box.getCenter(new THREE.Vector3()); C.y = 6;
 const extras = buildExtras(scene, items, C);
+window.DBG = { camera, controls, C, items, scene, setT: t => setT(t), D, extras };
+// khoet lo ho dao tren mat dat (ho mong hien ra khi dao, khoi dat che lai truoc do)
+if (extras.pit) { const p = extras.pit, s = new THREE.Shape(); s.moveTo(-2000, -2000); s.lineTo(2000, -2000); s.lineTo(2000, 2000); s.lineTo(-2000, 2000); s.closePath();
+  const h = new THREE.Path(); h.moveTo(p.x0, -p.z1); h.lineTo(p.x0, -p.z0); h.lineTo(p.x1, -p.z0); h.lineTo(p.x1, -p.z1); h.closePath(); s.holes.push(h);
+  ground.geometry.dispose(); ground.geometry = new THREE.ShapeGeometry(s); ground.position.y = extras.GL; }
+let exNote = "";
 camera.position.set(C.x + 110, 70, C.z + 110); controls.target.copy(C);
 
 // ---------------- trang thai theo thoi diem
@@ -94,7 +100,7 @@ function applyTime(t, sec) {
   renderer.toneMappingExposure = 0.35 + 0.45 * dayL + (wet ? 0.05 : 0);
   rain.visible = wet; if (wet) rain.position.set(camera.position.x, -((sec * 40) % 30), camera.position.z);
   const hol = holiday(t), working = !hol && ((hr >= 7 && hr < 11.5) || (hr >= 13 && hr < 17));
-  extras(t, sec, { working, night: dayL < 0.25, rain: wet });
+  exNote = extras(t, sec, { working, night: dayL < 0.25, rain: wet }) || "";
   if (highlight) { const k = Date.now() < hlUntil ? 0.5 + 0.5 * Math.sin(Date.now() / 150) : 0; highlight.traverse(o => { if (o.isMesh && o.material.emissive) o.material.emissive.setRGB(k * 0.6, k * 0.4, 0); }); if (!k) highlight = null; }
   curT = t;
 }
@@ -120,7 +126,8 @@ function updateInfo(t, maxTasks = 12) {
   const d = day0(t), hr = (t - d) / H, hol = holiday(t), wet = isRain(t);
   const act = TASKS.filter(k => d >= k.t0 && d < k.t1).sort((a, b) => a.t0 - b.t0);
   $("iTime").textContent = String(Math.floor(hr)).padStart(2, "0") + ":" + String(Math.floor((hr % 1) * 60)).padStart(2, "0");
-  const key = d + "|" + Math.floor(hr * 2) + "|" + wet + "|" + maxTasks; if (key === lastInfo) return; lastInfo = key;
+  const key = d + "|" + Math.floor(hr * 2) + "|" + wet + "|" + maxTasks + "|" + exNote; if (key === lastInfo) return; lastInfo = key;
+  $("exNote").style.display = exNote ? "block" : "none"; $("exNote").textContent = exNote;
   $("iDate").textContent = THU[new Date(t).getDay()] + ", " + fmt(t);
   $("iWx").textContent = wet ? "🌧 Mưa" : (hr > 6 && hr < 18 ? "☀ Nắng" : "🌙 Trời quang");
   $("iPhase").textContent = phaseOf(act, d);

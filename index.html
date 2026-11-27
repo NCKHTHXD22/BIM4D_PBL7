@@ -13,6 +13,7 @@ canvas{display:block}
 #info h3{margin:2px 0 6px;color:var(--ac);font-size:15px}
 .kv{display:grid;grid-template-columns:92px 1fr;gap:3px 8px;margin-bottom:6px}.kv b{color:#9fc3ff;font-weight:normal}
 #status{padding:5px 8px;border-radius:6px;font-weight:bold;margin:4px 0}
+#exNote{display:none;padding:6px 8px;border-radius:6px;margin:4px 0;background:#5b3a12;border:1px solid #c8913f;color:#ffe9c4;font-weight:bold}
 .task{border-left:4px solid #888;background:rgba(255,255,255,.06);margin:5px 0;padding:5px 7px;border-radius:4px;cursor:pointer}
 .task .bar{height:5px;background:#33415c;border-radius:3px;margin-top:4px}.task .bar i{display:block;height:5px;border-radius:3px;background:#4caf50}
 .task small{color:#c9d6ea}
@@ -50,6 +51,7 @@ body.rec #sub{bottom:auto;top:16px;left:auto;right:24px;transform:none;text-alig
   <h3>THÔNG TIN THI CÔNG</h3>
   <div class="kv"><b>Ngày</b><span id="iDate"></span><b>Giờ</b><span id="iTime"></span><b>Thời tiết</b><span id="iWx"></span><b>Giai đoạn</b><span id="iPhase"></span><b>Tiến độ</b><span id="iProg"></span></div>
   <div id="status"></div>
+  <div id="exNote"></div>
   <h3 id="iTaskH">CÔNG VIỆC ĐANG THI CÔNG</h3>
   <div id="iTasks"></div>
   <div id="legend"><i style="background:#c9c6c0"></i>Bê tông<i style="background:#9c3d1c"></i>Cốt thép<i style="background:#c8913f"></i>Ván khuôn<i style="background:#3aa35c"></i>Giàn giáo<i style="background:#b5522e"></i>Tường</div>

@@ -1,6 +1,7 @@
-// Vat the dong dung bang Three.js: luoi thep san/mong, may khoan coc, xe bom + xe bon, cong nhan, o to tren duong
+// Vat the dong dung bang Three.js: phan ngam chi tiet (coc, dao dat, dap dau coc, BT lot, thep dai, lap dat),
+// luoi thep san, may khoan, may dao, xe bom + xe bon, cong nhan, duong giao thong, cay xanh, den duong, nha dan
 import * as THREE from "three";
-const DAY = 864e5, D = s => new Date(s + "T00:00:00").getTime();
+const DAY = 864e5, H = 36e5, D = s => new Date(s + "T00:00:00").getTime();
 const inW = (t, a, b) => t >= D(a) && t < D(b) + DAY;
 const std = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.7, flatShading: true, ...o });
 const box = (w, h, d, m) => { const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); g.castShadow = true; return g; };
@@ -13,7 +14,7 @@ function makeTruck(body, cab = 0xe8e8e8) {
   const w = std(0x111111);
   for (const x of [-2.8, -1.4, 2.8]) for (const z of [-1.1, 1.1]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.4, 12), w); r.rotation.x = Math.PI / 2; r.position.set(x, 0.5, z); g.add(r); }
   if (body === "mixer") { const d = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 0.7, 4.5, 14), std(0xff8c1a)); d.rotation.z = Math.PI / 2 - 0.25; d.position.set(-1.2, 2.6, 0); d.castShadow = true; g.add(d); g.userData.drum = d; }
-  else if (body === "dump") { const b = box(5, 1.6, 2.4, std(0xe0a020)); b.position.set(-1.3, 2, 0); g.add(b); }
+  else if (body === "dump") { const b = box(5, 1.6, 2.4, std(0xe0a020)); b.position.set(-1.3, 2, 0); g.add(b); const s = box(4.6, 0.5, 2.1, std(0x7a5a3a, { roughness: 1 })); s.position.set(-1.3, 2.9, 0); g.add(s); g.userData.soil = s; }
   return g;
 }
 function makePump() {
@@ -31,6 +32,31 @@ function makeRig() {
   const mast = box(0.6, 18, 0.6, y); mast.position.set(2, 10, 0); g.add(mast);
   const kelly = box(0.25, 14, 0.25, std(0x888888)); kelly.position.set(2.5, 8, 0); g.add(kelly);
   return g;
+}
+function makeExcavator() {
+  const g = new THREE.Group(), y = std(0xf2b705), k = std(0x2b2b2b);
+  for (const s of [-1, 1]) { const t = box(4.4, 0.9, 0.85, k); t.position.set(0, 0.45, s * 1.25); g.add(t); }
+  const tur = new THREE.Group(); tur.position.y = 1.0; g.add(tur);
+  const body = box(3.4, 1.2, 2.6, y); body.position.set(-0.7, 0.6, 0); tur.add(body);
+  const cw = box(0.8, 1.0, 2.6, k); cw.position.set(-2.6, 0.6, 0); tur.add(cw);
+  const cab = box(1.3, 1.6, 1.1, std(0x2f4f6f, { roughness: 0.3 })); cab.position.set(0.5, 1.45, 0.75); tur.add(cab);
+  const boom = new THREE.Group(); boom.position.set(0.9, 1.1, -0.35); tur.add(boom);
+  const bm = box(5.4, 0.55, 0.5, y); bm.position.x = 2.7; boom.add(bm);
+  const arm = new THREE.Group(); arm.position.x = 5.4; boom.add(arm);
+  const am = box(3.4, 0.42, 0.42, y); am.position.x = 1.7; arm.add(am);
+  const bk = new THREE.Group(); bk.position.x = 3.4; arm.add(bk);
+  const bu = box(0.9, 0.9, 1.2, k); bu.position.set(0.3, -0.35, 0); bk.add(bu);
+  g.userData = { tur, boom, arm, bk }; return g;
+}
+// tu the may dao theo pha chu ky p (0..1): xuc dat -> quay -> do len xe -> quay ve
+function digPose(ex, p, yawDump = Math.PI) {
+  const { tur, boom, arm, bk } = ex.userData; const sm = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
+  let yaw = 0, b = 0.35, a = -1.2, c = 0.3;
+  if (p < 0.35) { const u = p / 0.35; b = 0.35 - 0.75 * Math.sin(u * Math.PI); a = -1.2 - 0.6 * u; c = 0.3 + 1.2 * u; }
+  else if (p < 0.55) { const u = sm((p - 0.35) / 0.2); yaw = yawDump * u; b = 0.35 + 0.25 * u; a = -1.8 + 0.4 * u; c = 1.5; }
+  else if (p < 0.7) { yaw = yawDump; b = 0.6; a = -1.4; c = 1.5 - 2.2 * sm((p - 0.55) / 0.15); }
+  else { const u = sm((p - 0.7) / 0.3); yaw = yawDump * (1 - u); b = 0.6 - 0.25 * u; a = -1.4 + 0.2 * u; c = -0.7 + u; }
+  tur.rotation.y = yaw; boom.rotation.z = b; arm.rotation.z = a; bk.rotation.z = c;
 }
 function makeWorker() {
   const g = new THREE.Group();
@@ -55,7 +81,25 @@ function makeTree(h) { const g = new THREE.Group(); const tr = new THREE.Mesh(ne
 const LAMP = std(0xfff3c4, { emissive: 0xffe08a, emissiveIntensity: 0 });
 function makeLamp() { const g = new THREE.Group(); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 8, 6), std(0x777f88, { metalness: 0.5 })); p.position.y = 4; g.add(p);
   const a = box(1.6, 0.1, 0.12, std(0x777f88)); a.position.set(0.7, 7.9, 0); g.add(a); const l = box(0.6, 0.15, 0.3, LAMP); l.position.set(1.4, 7.8, 0); g.add(l); return g; }
-// luoi thep: InstancedMesh cac thanh mong
+// hop bao cua tung instance trong 1 nhom (lay vi tri dai, giang mong tu mo hinh Revit)
+function instBoxes(holder, re) {
+  const out = [], m = new THREE.Matrix4(); holder.updateMatrixWorld(true);
+  holder.traverse(o => { if (!o.isMesh || !re.test(o.name)) return; if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); const n = o.isInstancedMesh ? o.count : 1;
+    for (let k = 0; k < n; k++) { if (o.isInstancedMesh) { o.getMatrixAt(k, m); m.premultiply(o.matrixWorld); } else m.copy(o.matrixWorld); out.push(o.geometry.boundingBox.clone().applyMatrix4(m)); } });
+  return out;
+}
+// ti le thoi gian lam viec (07-17h, bo Chu nhat) cua n ngay lam viec bat dau tu ngay a
+function wf(t, a, n) { let d = D(a), done = 0, k = 0; while (k < n) { if (new Date(d).getDay() !== 0) { done += Math.max(0, Math.min(1, ((t - d) / H - 7) / 10)); k++; } d += DAY; } return done / n; }
+const ramp = (t, a, b) => Math.max(0, Math.min(1, (t - a) / (b - a)));
+// ho dao: day (floor=true) hoac 4 mai doc
+function pitMesh(bot, top, yb, yt, mat, floor) {
+  const B = [[bot.x0, yb, bot.z0], [bot.x1, yb, bot.z0], [bot.x1, yb, bot.z1], [bot.x0, yb, bot.z1]], U = [[top.x0, yt, top.z0], [top.x1, yt, top.z0], [top.x1, yt, top.z1], [top.x0, yt, top.z1]];
+  const v = []; const quad = (a, b, c, d) => v.push(...a, ...b, ...c, ...a, ...c, ...d);
+  if (floor) quad(B[0], B[3], B[2], B[1]); else for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; quad(U[i], U[j], B[j], B[i]); }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(v, 3)); g.computeVertexNormals();
+  const m = new THREE.Mesh(g, mat); m.receiveShadow = true; return m;
+}
+// luoi thep: InstancedMesh cac thanh
 function rebarGrid(b, y, step = 0.5) {
   const nx = Math.floor((b.max.x - b.min.x) / step), nz = Math.floor((b.max.z - b.min.z) / step);
   const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.03, 0.03), std(0x9c3d1c, { metalness: 0.6, roughness: 0.45 }), (nx + nz) * 2);
@@ -70,74 +114,178 @@ function rebarGrid(b, y, step = 0.5) {
 export function buildExtras(scene, items, C) {
   const get = f => items.find(i => i.g.f === f);
   const bb = f => get(f)?.box;
-  const fence = bb("01") || new THREE.Box3(new THREE.Vector3(C.x - 50, 0, C.z - 40), new THREE.Vector3(C.x + 50, 0, C.z + 40));
+  const GL = -1.0, RY = -0.75, SW = -0.6;              // cao do mat dat tu nhien, mat duong, via he (m)
   const bld = bb("20") || new THREE.Box3().setFromCenterAndSize(C, new THREE.Vector3(43, 10, 32));
   const parts = [];
   // 1. luoi thep san tung tang (hien tu ngay CT dam san den het do BT)
   const floors = [["20", "2027-04-28", "2027-05-08"], ["21", "2027-05-20", "2027-05-28"], ["23", "2027-06-09", "2027-06-17"], ["25", "2027-06-29", "2027-07-07"], ["27", "2027-07-19", "2027-07-27"], ["29", "2027-08-07", "2027-08-16"]];
   for (const [f, a, b] of floors) { const x = bb(f); if (!x) continue; const g = rebarGrid(x, x.max.y - 0.12); scene.add(g); parts.push({ o: g, a, b }); }
-  const ft = bb("12"); if (ft) { const g = rebarGrid(ft, ft.max.y - 0.25, 0.4); scene.add(g); parts.push({ o: g, a: "2027-04-03", b: "2027-04-09" }); }
-  // 2. may khoan coc (6 may) di chuyen trong mat bang
+
+  // ================= PHAN NGAM: coc -> dao dat -> dap dau coc -> BT lot -> thep dai -> VK -> BT -> lap dat
+  const fts = get("12") ? instBoxes(get("12").holder, /DaiMong/i) : [];
+  const beams = get("12") ? instBoxes(get("12").holder, /Concrete-Rect/i) : [];
+  const FB = bb("11") ? bb("11").min.y : -3.9, PF = FB - 0.1;          // day dai; day ho dao (duoi lop BT lot 100)
+  const ftR = fts.map(b => ({ x0: b.min.x, x1: b.max.x, z0: b.min.z, z1: b.max.z, cx: (b.min.x + b.max.x) / 2, cz: (b.min.z + b.max.z) / 2 })).sort((a, b) => a.cx - b.cx || a.cz - b.cz);
+  const bmR = beams.map(b => ({ x0: b.min.x, x1: b.max.x, z0: b.min.z, z1: b.max.z, cx: (b.min.x + b.max.x) / 2 }));
+  const all = [...ftR, ...bmR];
+  const bot = all.length ? { x0: Math.min(...all.map(r => r.x0)) - 0.8, x1: Math.max(...all.map(r => r.x1)) + 0.8, z0: Math.min(...all.map(r => r.z0)) - 0.8, z1: Math.max(...all.map(r => r.z1)) + 0.8 }
+    : { x0: bld.min.x, x1: bld.max.x, z0: bld.min.z, z1: bld.max.z };
+  const sl = 0.5 * (GL - PF), top = { x0: bot.x0 - sl, x1: bot.x1 + sl, z0: bot.z0 - sl, z1: bot.z1 + sl };   // mai doc 1:0,5
+  const SOIL = std(0x8a6a45, { roughness: 1, side: THREE.DoubleSide }), SOILF = std(0x6f5536, { roughness: 1, side: THREE.DoubleSide });
+  scene.add(pitMesh(bot, top, PF, GL, SOIL, false), pitMesh(bot, top, PF, GL, SOILF, true));
+  // khoi dat chua dao (thu hep dan theo tien do dao) + khoi dat lap (dang len dan)
+  const GRD = new THREE.MeshStandardMaterial({ color: 0xbfae86, roughness: 1 });
+  const unbox = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [SOIL, SOIL, GRD, SOIL, SOIL, SOIL]); unbox.receiveShadow = true; scene.add(unbox);
+  const FILL = new THREE.MeshStandardMaterial({ color: 0x9a7b52, roughness: 1 });
+  const fill = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [SOIL, SOIL, FILL, SOIL, SOIL, SOIL]); fill.receiveShadow = true; scene.add(fill);
+  // coc khoan nhoi D600: 4 coc/dai don, 6 coc/dai lon
+  const piles = [];
+  for (const r of ftR) { const w = r.x1 - r.x0, d = r.z1 - r.z0, e = 0.75;
+    if (Math.max(w, d) > 3.6) { const L = w > d; for (const a of [-1, 0, 1]) for (const b of [-1, 1]) piles.push(L ? [r.cx + a * (w / 2 - e), r.cz + b * (d / 2 - e)] : [r.cx + b * (w / 2 - e), r.cz + a * (d / 2 - e)]); }
+    else for (const a of [-1, 1]) for (const b of [-1, 1]) piles.push([r.cx + a * (w / 2 - e), r.cz + b * (d / 2 - e)]); }
+  piles.sort((a, b) => a[0] - b[0] || a[1] - b[1]); const NP = piles.length, per = Math.max(1, Math.ceil(NP / 6));
+  const PG = new THREE.CylinderGeometry(0.3, 0.3, 1, 12); PG.translate(0, 0.5, 0);
+  const pileM = new THREE.InstancedMesh(PG, std(0xb8b4ac, { roughness: 0.9 }), Math.max(1, NP)); pileM.castShadow = true; scene.add(pileM);
+  const capM = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.42, 0.42, 0.12, 12), std(0x4a4a4a, { metalness: 0.5 }), Math.max(1, NP)); scene.add(capM);
+  // be tong lot (dai + giang) va cot thep dai (2 lop luoi + thep cho cot), tien hanh tu tay sang dong
+  const lean = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), std(0x9c9a95, { roughness: 0.95 }), Math.max(1, all.length)); lean.receiveShadow = true; scene.add(lean);
+  { const o = new THREE.Object3D(); [...all].sort((a, b) => a.cx - b.cx).forEach((r, k) => { o.position.set((r.x0 + r.x1) / 2, PF + 0.05, (r.z0 + r.z1) / 2); o.scale.set(r.x1 - r.x0 + 0.2, 0.1, r.z1 - r.z0 + 0.2); o.updateMatrix(); lean.setMatrixAt(k, o.matrix); }); }
+  const bars = [], ftCount = [];
+  { const o = new THREE.Object3D(); const add = (x, y, z, len, ry, rz = 0) => { o.position.set(x, y, z); o.rotation.set(0, ry, rz); o.scale.set(len, 1, 1); o.updateMatrix(); bars.push(o.matrix.clone()); };
+    for (const r of ftR) { const w = r.x1 - r.x0 - 0.1, d = r.z1 - r.z0 - 0.1;
+      for (const ly of [FB + 0.08, FB + 0.75]) { for (let z = r.z0 + 0.1; z < r.z1 - 0.05; z += 0.2) add(r.cx, ly, z, w, 0); for (let x = r.x0 + 0.1; x < r.x1 - 0.05; x += 0.2) add(x, ly + 0.03, r.cz, d, Math.PI / 2); }
+      for (const a of [-0.22, 0, 0.22]) for (const b of [-0.22, 0, 0.22]) if (a || b) add(r.cx + a, FB + 1.5, r.cz + b, 2.9, 0, Math.PI / 2);
+      ftCount.push(bars.length); } }
+  const rebarF = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.028, 0.028), std(0x9c3d1c, { metalness: 0.6, roughness: 0.45 }), Math.max(1, bars.length)); bars.forEach((m, k) => rebarF.setMatrixAt(k, m)); rebarF.count = 0; scene.add(rebarF);
+  // may dao (2 may dao + 1 may sua ho/lap dat) + 2 xe ben dang nhan dat
+  const exs = [makeExcavator(), makeExcavator(), makeExcavator()]; exs.forEach(e => { e.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(e); });
+  const loadT = [makeTruck("dump"), makeTruck("dump")]; loadT.forEach(t => scene.add(t));
+  // may khoan coc (6 may), moi may phu trach 1 dai coc theo thu tu tu tay sang dong
   const rigs = []; for (let i = 0; i < 6; i++) { const r = makeRig(); scene.add(r); rigs.push(r); }
-  // 3. xe bom + 2 xe bon o mep nam cong trinh, chi hien ngay do BT
+
+  // 3. xe bom + 2 xe bon tren via he phia nam, chi hien ngay do BT
   const pours = [["2027-04-08", "2027-04-13", 0], ["2027-04-23", "2027-04-24", 1], ["2027-05-06", "2027-05-08", 1], ["2027-05-15", "2027-05-17", 2], ["2027-05-26", "2027-05-28", 2], ["2027-06-04", "2027-06-05", 3], ["2027-06-15", "2027-06-17", 3], ["2027-06-24", "2027-06-25", 4], ["2027-07-05", "2027-07-07", 4], ["2027-07-14", "2027-07-15", 5], ["2027-07-24", "2027-07-27", 5], ["2027-08-03", "2027-08-04", 6], ["2027-08-13", "2027-08-16", 6]];
   const pump = makePump(); const mix1 = makeTruck("mixer"), mix2 = makeTruck("mixer");
-  const py = 0, pz = bld.max.z + 9, px = (bld.min.x + bld.max.x) / 2;
-  pump.position.set(px, py, pz); mix1.position.set(px - 11, py, pz + 1); mix2.position.set(px - 22, py, pz + 1);
+  const pz = bld.max.z + 9, px = (bld.min.x + bld.max.x) / 2;
+  pump.position.set(px, SW, pz); mix1.position.set(px - 11, SW, pz + 1); mix2.position.set(px - 22, SW, pz + 1);
   scene.add(pump, mix1, mix2);
   // 4. cong nhan
   const workers = []; for (let i = 0; i < 36; i++) { const w = makeWorker(); scene.add(w); workers.push({ o: w, s: Math.random() * 1000, r: 0.3 + Math.random() * 0.7 }); }
-  // 5. o to chay vong quanh duong bao cong truong + xe tai cho dat
-  const cars = []; const cols = [0xc0392b, 0xecf0f1, 0x2c3e50, 0x2980b9, 0x7f8c8d, 0xf1c40f, 0x16a085, 0x8e44ad];
-  for (let i = 0; i < 8; i++) { const c = makeCar(cols[i]); scene.add(c); cars.push({ o: c, s: i / 8 }); }
-  const dumps = [makeTruck("dump"), makeTruck("dump")]; dumps.forEach(d => scene.add(d));
-  const R = { x0: fence.min.x - 7, x1: fence.max.x + 7, z0: fence.min.z - 7, z1: fence.max.z + 7 };
-  // duong nhua chu L: canh z lon (phia nam) va canh x nho (phia tay)
-  const LA = R.x1 + 25 - R.x0, LB = R.z1 - (R.z0 - 25), per = LA + LB;
-  const along = (u, lane = 0) => { let d = ((u % 1) + 1) % 1 * per; const back = lane > 0;
-    if (back) d = per - d; const o = back ? -1.8 : 1.8;
-    if (d < LA) return [R.x1 + 25 - d, R.z1 + o, back ? 0 : Math.PI]; d -= LA; return [R.x0 + o, R.z1 - d, back ? -Math.PI / 2 : Math.PI / 2]; };
-  // cay xanh + den duong doc tuyen duong chu L, nha lan can phia ngoai duong
+
+  // ================= DUONG GIAO THONG theo duong nhua Revit (phia nam z 33-48,5; phia tay x -39..-24), noi dai ra ngoai
+  const XE = 190, ZE = -170;
+  // lan 0: phan duong trong (gan cong truong); lan 1: phan duong ngoai, chieu nguoc lai
+  const LANES = [[[XE, 37.3], [-26.8, 37.3], [-26.8, ZE]], [[-35.5, ZE], [-35.5, 39.5], [-27.5, 45.5], [XE, 45.5]]].map(pts => {
+    const seg = []; let L = 0; for (let i = 1; i < pts.length; i++) { const [x0, z0] = pts[i - 1], [x1, z1] = pts[i]; const l = Math.hypot(x1 - x0, z1 - z0); seg.push({ x0, z0, dx: (x1 - x0) / l, dz: (z1 - z0) / l, l, s: L }); L += l; } return { seg, L }; });
+  const along = (u, lane = 0) => { const P = LANES[lane % 2]; let d = ((u % 1) + 1) % 1 * P.L; const g = P.seg.find(q => d < q.s + q.l) || P.seg[P.seg.length - 1]; d -= g.s;
+    return [g.x0 + g.dx * d, g.z0 + g.dz * d, Math.atan2(-g.dz, g.dx)]; };
+  const place = (o, u, lane, off = 0) => { const [x, z, a] = along(u, lane); o.position.set(x + Math.sin(a) * off, RY, z + Math.cos(a) * off); o.rotation.y = a; };
   const decor = new THREE.Group(); scene.add(decor);
-  for (let d = 0; d < per; d += 12) { const [x, z, a] = along(d / per, 0); const n = new THREE.Vector3(Math.sin(a + Math.PI / 2), 0, Math.cos(a + Math.PI / 2));
-    for (const sd of [-1, 1]) { const tr = makeTree(5 + Math.random() * 3); tr.position.set(x + n.x * sd * 8.5, 0, z + n.z * sd * 8.5); decor.add(tr); }
-    const out = (C.x - (x + n.x)) ** 2 + (C.z - (z + n.z)) ** 2 > (C.x - (x - n.x)) ** 2 + (C.z - (z - n.z)) ** 2 ? 1 : -1;
-    if ((d / 12) % 2 === 0) { const lp = makeLamp(); lp.position.set(x + n.x * 6.5 * out, 0, z + n.z * 6.5 * out); lp.rotation.y = a + (out > 0 ? Math.PI / 2 : -Math.PI / 2); decor.add(lp); } }
-  const bcol = [0xe8dcc8, 0xd6e4f0, 0xf2e6d0, 0xcfd8dc, 0xf0d9c5, 0xdfe6d8];
-  for (let d = 10; d < per - 10; d += 22) { const [x, z, a] = along(d / per, 0); const n = new THREE.Vector3(Math.sin(a + Math.PI / 2), 0, Math.cos(a + Math.PI / 2));
-    const out = (C.x - (x + n.x)) ** 2 + (C.z - (z + n.z)) ** 2 > (C.x - (x - n.x)) ** 2 + (C.z - (z - n.z)) ** 2 ? 1 : -1;
-    const h = 6 + Math.floor(Math.random() * 3) * 3.3; const b = box(16, h, 12, std(bcol[(d / 22 | 0) % bcol.length])); b.position.set(x + n.x * 26 * out, h / 2, z + n.z * 26 * out); b.rotation.y = a; b.receiveShadow = true; decor.add(b);
-    const roof = box(16.4, 0.4, 12.4, std(0x8d6e63)); roof.position.set(b.position.x, h + 0.2, b.position.z); roof.rotation.y = a; decor.add(roof); }
+  const strip = (x0, x1, z0, z1, y, c) => { const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.3, z1 - z0), std(c, { roughness: 0.95 })); m.position.set((x0 + x1) / 2, y - 0.15, (z0 + z1) / 2); m.receiveShadow = true; decor.add(m); };
+  const ASP = 0x55585c, SWC = 0xb3ada4, MED = 0x5f8f3a;
+  for (const [z0, z1, y, c] of [[30.5, 33, SW, SWC], [33, 41, RY - 0.01, ASP], [41, 42.5, SW, MED], [42.5, 48.5, RY - 0.01, ASP], [48.5, 52.5, SW, SWC]]) strip(51.5, XE + 10, z0, z1, y, c);
+  for (const [x0, x1, y, c] of [[-23.5, -20.5, SW, SWC], [-30, -23.5, RY - 0.01, ASP], [-32.5, -30, SW, MED], [-39, -32.5, RY - 0.01, ASP], [-42.5, -39, SW, SWC]]) strip(x0, x1, ZE - 10, -21.5, y, c);
+  const DASH = std(0xf2f2f2, { roughness: 0.6 });
+  for (let x = 56; x < XE; x += 6) for (const z of [37, 45.5]) { const m = new THREE.Mesh(new THREE.BoxGeometry(3, 0.02, 0.15), DASH); m.position.set(x, RY + 0.005, z); decor.add(m); }
+  for (let z = -26; z > ZE; z -= 6) for (const x of [-26.8, -35.7]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.02, 3), DASH); m.position.set(x, RY + 0.005, z); decor.add(m); }
+  // cay xanh tren via he ngoai (va via he trong o doan noi dai), den duong 2 canh tren dai phan cach
+  const tree = (x, z) => { const t = makeTree(5 + Math.random() * 3); t.position.set(x, SW, z); decor.add(t); };
+  for (let x = -36; x < XE; x += 11) tree(x, 50.8);
+  for (let z = 40; z > ZE; z -= 11) tree(-40.8, z);
+  for (let x = 58; x < XE; x += 11) tree(x, 31.7);
+  for (let z = -30; z > ZE; z -= 11) tree(-22, z);
+  const lamp = (x, z, r) => { const l = makeLamp(); l.position.set(x, SW, z); l.rotation.y = r; decor.add(l); };
+  for (let x = -20; x < XE; x += 26) { lamp(x, 41.75, Math.PI / 2); lamp(x, 41.75, -Math.PI / 2); }
+  for (let z = 26; z > ZE; z -= 26) { lamp(-31.25, z, 0); lamp(-31.25, z, Math.PI); }
+  // nha dan: lui sau via he >= 3,5 m, cach nhau 5-11 m, khong de len duong / cong truong
+  const bcol = [0xe8dcc8, 0xd6e4f0, 0xf2e6d0, 0xcfd8dc, 0xf0d9c5, 0xdfe6d8, 0xe6d3b3, 0xd9e2c4]; let seed = 7; const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  const house = (cx, cz, w, d, h) => { const b = box(w, h, d, std(bcol[Math.floor(rnd() * bcol.length)])); b.position.set(cx, GL + h / 2, cz); b.receiveShadow = true; decor.add(b);
+    const rf = box(w + 0.4, 0.4, d + 0.4, std([0x8d6e63, 0xa1503a, 0x6d7b8a][Math.floor(rnd() * 3)])); rf.position.set(cx, GL + h + 0.2, cz); decor.add(rf);
+    for (let k = 1; k < h / 3.3 - 0.5; k++) { const wb = box(w * 0.7, 0.9, d + 0.06, std(0x34495e, { roughness: 0.25 })); wb.castShadow = false; wb.position.set(cx, GL + k * 3.3 - 1.2, cz); decor.add(wb); } };
+  const H3 = () => 3.6 + Math.floor(rnd() * 4) * 3.3;
+  for (let x = -34; x < XE - 8;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 5; house(x + w / 2, 56 + d / 2, w, d, H3()); x += w + 5 + rnd() * 6; }      // phia nam (ngoai duong)
+  for (let z = 38; z > ZE + 8;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 5; house(-46 - d / 2, z - w / 2, d, w, H3()); z -= w + 5 + rnd() * 6; }  // phia tay (ngoai duong)
+  house(-60, 66, 18, 16, 13.5);                                                                                                                     // nha goc nga tu
+  for (let x = -14; x < 58;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 4; house(x + w / 2, -38 - d / 2, w, d, H3()); x += w + 6 + rnd() * 6; }      // phia bac
+  for (let z = 20; z > -50;) { const w = 10 + rnd() * 8, d = 10 + rnd() * 4; house(64 + d / 2, z - w / 2, d, w, H3()); z -= w + 6 + rnd() * 6; }       // phia dong
+  // phuong tien
+  const cars = []; const cols = [0xc0392b, 0xecf0f1, 0x2c3e50, 0x2980b9, 0x7f8c8d, 0xf1c40f, 0x16a085, 0x8e44ad];
+  for (let i = 0; i < 10; i++) { const c = makeCar(cols[i % 8]); scene.add(c); cars.push({ o: c, s: i / 10 }); }
+  const dumps = [makeTruck("dump"), makeTruck("dump")]; dumps.forEach(d => scene.add(d));
   const bus = makeBus(); scene.add(bus); const bikes = [0x1565c0, 0xc62828, 0x2e7d32, 0x212121, 0xf9a825, 0x6a1b9a].map(c => { const b = makeBike(c); scene.add(b); return b; });
   // tang dang thi cong (cao do de dat cong nhan)
   const lvl = t => { let y = 0; for (const f of ["20", "21", "23", "25", "27", "29"]) { const it = get(f); if (it && t >= it.on) y = it.box.max.y; } return y; };
+  const o3 = new THREE.Object3D(), Z0 = new THREE.Matrix4().makeScale(0, 0, 0);
+  const T = { pile0: D("2027-02-22") + 7 * H, pile1: D("2027-03-27") + 17 * H, dig: D("2027-03-29"), hand: D("2027-03-31"), lean: D("2027-04-02"), reb: D("2027-04-03"), conc: D("2027-04-08"), fill0: D("2027-04-15") + 7 * H, fill1: D("2027-04-18") + 17 * H };
+  const fmtY = y => (y >= 0 ? "+" : "") + y.toFixed(2).replace(".", ",");
 
-  return function update(t, sec, env = { working: true, night: false, rain: false }) {
+  const update = function (t, sec, env = { working: true, night: false, rain: false }) {
     LAMP.emissiveIntensity = env.night || env.rain ? 2.2 : 0;
-    { const [x, z, a] = along(0.3 + sec * 0.012, 1); bus.position.set(x, 0, z); bus.rotation.y = a; }
-    bikes.forEach((b, i) => { const [x, z, a] = along(i / 6 + sec * 0.045, i % 2); b.position.set(x, 0, z + (i % 3 - 1) * 0.6); b.rotation.y = a; });
+    let note = "";
+    place(bus, 0.3 + sec * 0.01, 1, -1.2);
+    bikes.forEach((b, i) => place(b, i / 6 + sec * 0.035, i % 2, (i % 3 - 1) * 1.2 + 2));
     for (const p of parts) p.o.visible = inW(t, p.a, p.b);
-    // may khoan coc
-    const drill = inW(t, "2027-02-22", "2027-03-28"); const dd = new Date(t).getDay();
-    rigs.forEach((r, i) => { r.visible = drill; if (!drill) return; const u = (t - D("2027-02-22")) / (35 * DAY);
-      const gx = i % 3, gz = Math.floor(i / 3); r.position.set(bld.min.x + 5 + (gx + u) * (bld.max.x - bld.min.x - 10) / 3, 0, bld.min.z + 6 + gz * (bld.max.z - bld.min.z - 12) + Math.sin(sec + i) * 0.5); });
-    // xe bom
+    // ---- coc khoan nhoi: 6 may, moi may 1 doan coc
+    const uP = ramp(t, T.pile0, T.pile1), loc = Math.min(per, Math.floor(uP * per));
+    const drill = t >= T.pile0 - 2 * DAY && t < T.pile1;
+    rigs.forEach((r, i) => { r.visible = drill; if (!drill) return; const p = piles[Math.min(NP - 1, i * per + Math.min(per - 1, loc))] || [C.x, C.z];
+      r.position.set(p[0] - 2.5, GL, p[1]); r.children[3].position.y = 8 + Math.sin(sec * 0.8 + i) * 2.5; });
+    // ---- dao dat: may 29-30/03 (90%), thu cong + dap dau coc 31/03-01/04 (10%)
+    const uM = wf(t, "2027-03-29", 2), uH = wf(t, "2027-03-31", 2), uDig = 0.9 * uM + 0.1 * uH;
+    const front = top.x0 + (top.x1 - top.x0) * uDig;
+    unbox.visible = uDig < 0.999; if (unbox.visible) { unbox.scale.set(top.x1 - front, GL - PF, top.z1 - top.z0); unbox.position.set((front + top.x1) / 2, (GL + PF) / 2 + 0.005, (top.z0 + top.z1) / 2); }
+    const beforeConc = t < T.conc + 12 * H;
+    for (let k = 0; k < NP; k++) { const [x, z] = piles[k]; const done = uP >= 1 || (k % per) < loc; const dug = t >= T.dig && x < front - 0.5;
+      if (done && !dug && t >= T.pile0) { o3.position.set(x, GL + 0.03, z); o3.scale.set(1, 1, 1); o3.updateMatrix(); capM.setMatrixAt(k, o3.matrix); } else capM.setMatrixAt(k, Z0);
+      if (dug && beforeConc) { const ty = uH > (k + 0.5) / NP ? FB + 0.1 : FB + 1.0; o3.position.set(x, PF - 0.6, z); o3.scale.set(1, ty - PF + 0.6, 1); o3.updateMatrix(); pileM.setMatrixAt(k, o3.matrix); } else pileM.setMatrixAt(k, Z0); }
+    capM.instanceMatrix.needsUpdate = pileM.instanceMatrix.needsUpdate = true;
+    // ---- BT lot 02/04; cot thep dai 03-07/04
+    const uL = wf(t, "2027-04-02", 1); lean.count = t < T.fill1 ? Math.floor(uL * all.length + 1e-6) : 0;
+    const uR = wf(t, "2027-04-03", 5), nf = Math.floor(uR * ftR.length + 1e-6); rebarF.count = t < T.fill0 && nf > 0 ? ftCount[nf - 1] : 0;
+    // ---- lap dat 15-18/04
+    const uF = ramp(t, T.fill0, T.fill1), fy = PF + (GL - PF) * uF; fill.visible = uF > 0;
+    if (fill.visible) { fill.scale.set(top.x1 - top.x0, fy - PF, top.z1 - top.z0); fill.position.set((top.x0 + top.x1) / 2, (fy + PF) / 2 + 0.004, (top.z0 + top.z1) / 2); FILL.color.set(uF >= 1 ? 0xbfae86 : 0x9a7b52); }
+    // ---- may dao + xe ben nhan dat
+    const digM = t >= T.dig && uM < 1 && t < T.hand, handM = t >= T.hand && t < T.lean, fillM = uF > 0 && uF < 1;
+    exs.forEach((e, i) => { const vis = i < 2 ? digM : (fillM || handM); e.visible = vis; if (!vis) return;
+      const ph = env.working ? (sec * 0.11 + i * 0.37) % 1 : 0.05;
+      if (i < 2) { e.position.set(Math.min(front + 4.5, top.x1 + 3), GL, top.z0 + (top.z1 - top.z0) * (i ? 0.72 : 0.28)); e.rotation.y = Math.PI; digPose(e, ph, Math.PI); }
+      else if (fillM) { e.position.set(top.x0 + 4 + (top.x1 - top.x0 - 8) * ((uF * 3) % 1), GL, top.z1 + 3.5); e.rotation.y = Math.PI / 2; digPose(e, ph, -Math.PI / 2); }
+      else { e.position.set(top.x0 + 4 + (top.x1 - top.x0 - 8) * uH, GL, top.z0 - 3.5); e.rotation.y = -Math.PI / 2; digPose(e, ph, Math.PI / 2); } });
+    loadT.forEach((tr, i) => { tr.visible = digM; if (digM) { tr.position.set(Math.min(front + 13, top.x1 + 11), GL, top.z0 + (top.z1 - top.z0) * (i ? 0.72 : 0.28)); tr.userData.soil.visible = ((sec * 0.11 + i * 0.37) % 1) > 0.6; } });
+    // ---- ghi chu chi tiet phan ngam
+    if (t >= T.pile0 - DAY && t < T.pile1 + DAY) note = `🔩 Cọc khoan nhồi D600: đã thi công ${uP >= 1 ? NP : loc * 6}/${NP} cọc · 6 máy khoan (khoan tạo lỗ → hạ lồng thép → đổ BT → rút ống vách)`;
+    else if (t >= T.dig && t < T.hand) note = `⛏ Đào đất hố móng bằng máy: ${Math.round(uDig * 100)}% khối lượng · 2 máy đào + xe ben chở đất · đáy hố ${fmtY(PF)} m, mái dốc 1:0,5`;
+    else if (t >= T.hand && t < T.lean) note = `🔨 Đào sửa thủ công, đập đầu cọc: ${Math.floor(uH * NP)}/${NP} cọc (cắt về cao độ ${fmtY(FB + 0.1)} m)`;
+    else if (t >= T.lean && t < T.reb) note = `🧱 Đổ bê tông lót móng dày 100: ${lean.count}/${all.length} đài, giằng`;
+    else if (t >= T.reb && t < D("2027-04-08")) note = `🔧 Cốt thép đài, giằng móng: ${nf}/${ftR.length} đài (2 lớp lưới + thép chờ cột)` + (t >= D("2027-04-06") ? " · lắp ván khuôn" : "");
+    else if (t >= T.conc && t < D("2027-04-14")) note = "🚚 Đổ bê tông đài, giằng móng bằng xe bơm cần + xe bồn; bảo dưỡng ẩm";
+    else if (t >= D("2027-04-14") && t < T.fill0) note = "🪵 Tháo ván khuôn đài, giằng; thi công cổ cột";
+    else if (t >= T.fill0 && t < T.fill1 + 14 * H) note = `🚜 Lấp đất, cát đệm hố móng, đầm chặt K=0,95: cao độ lấp ${fmtY(fy)} m (${Math.round(uF * 100)}%)`;
+    // ---- xe bom
     const pr = pours.find(p => inW(t, p[0], p[1]));
     pump.visible = mix1.visible = mix2.visible = !!pr;
     if (pr) { const f = pr[2]; const s = pump.userData.segs;
       pump.userData.turret.rotation.y = Math.PI / 2 + Math.sin(sec * 0.4) * 0.35;
       const lift = 0.25 + f * 0.09; s[0].rotation.z = lift + 0.35; s[1].rotation.z = -0.55 + f * 0.04; s[2].rotation.z = -0.75 + Math.sin(sec * 0.6) * 0.08;
       [mix1, mix2].forEach(m => { if (m.userData.drum) m.userData.drum.rotation.x = sec * 2; }); }
-    // xe tai cho dat khi dao dat
+    // ---- xe ben cho dat tren duong, o to
     const dig = inW(t, "2027-03-29", "2027-04-01");
-    dumps.forEach((d, i) => { d.visible = dig; if (dig) { const [x, z, a] = along(sec * 0.025 + i * 0.5, i); d.position.set(x, 0, z); d.rotation.y = a; } });
-    // o to
-    cars.forEach((c, i) => { const [x, z, a] = along(c.s + sec * 0.03, i % 2); c.o.position.set(x, 0, z); c.o.rotation.y = a; });
-    // cong nhan: tren tang dang thi cong; mat bang chuan bi: tren nen
-    const active = env.working && t >= D("2027-02-15") && t < D("2027-12-11"); const y = t < D("2027-04-19") ? 0 : lvl(t);
+    dumps.forEach((d, i) => { d.visible = dig; if (dig) place(d, sec * 0.02 + i * 0.5, i, 0); });
+    cars.forEach((c, i) => place(c.o, c.s + sec * 0.025, i % 2, i % 2 ? 1.5 : -1.5));
+    // ---- cong nhan
+    const active = env.working && t >= D("2027-02-15") && t < D("2027-12-11");
     workers.forEach((w, i) => { w.o.visible = active; if (!active) return;
-      const ang = w.s + sec * w.r * 0.5; const gx = (i % 6 + 0.5) / 6, gz = (Math.floor(i / 6) + 0.5) / 6;
-      w.o.position.set(bld.min.x + gx * (bld.max.x - bld.min.x) + Math.cos(ang) * 1.5, y + Math.abs(Math.sin(sec * 6 + i)) * 0.05, bld.min.z + gz * (bld.max.z - bld.min.z) + Math.sin(ang) * 1.5);
-      w.o.rotation.y = -ang; });
+      const ang = w.s + sec * w.r * 0.5; let x, y, z;
+      if (drill && t >= T.pile0) { const r = rigs[i % 6]; x = r.position.x + 2.5 + Math.cos(ang) * 3.5; z = r.position.z + Math.sin(ang) * 3.5; y = GL; }
+      else if (t >= T.dig && t < T.fill0 && ftR.length) { const f = ftR[(i * 7) % ftR.length]; x = f.cx + Math.cos(ang) * 1.6; z = f.cz + Math.sin(ang) * 1.6;
+        if (t < T.hand && x > front - 2) { w.o.visible = false; return; } y = PF + (t >= T.lean ? 0.1 : 0); }
+      else if (t >= T.fill0 && t < D("2027-04-19")) { x = top.x0 + ((i % 9) + 0.5) / 9 * (top.x1 - top.x0) + Math.cos(ang); z = top.z0 + (Math.floor(i / 9) + 0.5) / 4 * (top.z1 - top.z0) + Math.sin(ang); y = t >= T.fill1 ? 0 : fy; }
+      else { y = t < D("2027-04-19") ? (t < T.pile0 ? GL : 0) : lvl(t); const gx = (i % 6 + 0.5) / 6, gz = (Math.floor(i / 6) + 0.5) / 6;
+        x = bld.min.x + gx * (bld.max.x - bld.min.x) + Math.cos(ang) * 1.5; z = bld.min.z + gz * (bld.max.z - bld.min.z) + Math.sin(ang) * 1.5; }
+      w.o.position.set(x, y + Math.abs(Math.sin(sec * 6 + i)) * 0.05, z); w.o.rotation.y = -ang; });
+    return note;
   };
+  update.pit = top; update.GL = GL; update.stats = { piles: NP, footings: ftR.length, beams: bmR.length, PF };
+  return update;
 }
