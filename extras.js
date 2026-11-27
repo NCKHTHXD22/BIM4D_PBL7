@@ -264,8 +264,50 @@ export function buildExtras(scene, items, C) {
   for (let i = 0; i < 10; i++) { const c = makeCar(cols[i % 8]); scene.add(c); cars.push({ o: c, s: i / 10 }); }
   const dumps = [makeTruck("dump"), makeTruck("dump")]; dumps.forEach(d => scene.add(d));
   const bus = makeBus(); scene.add(bus); const bikes = [0x1565c0, 0xc62828, 0x2e7d32, 0x212121, 0xf9a825, 0x6a1b9a].map(c => { const b = makeBike(c); scene.add(b); return b; });
-  // tang dang thi cong (cao do de dat cong nhan)
-  const lvl = t => { let y = 0; for (const f of ["20", "21", "23", "25", "27", "29"]) { const it = get(f); if (it && t >= it.on) y = it.box.max.y; } return y; };
+  // ================= GIAN GIAO NGOAI + LUOI BAO CHE DUNG (thay nhom 31 Revit: cot/luoi bi xoay nam ngang khi xuat FBX)
+  const sc = get("31"); let SR = null, SH = 23.5;
+  if (sc) { const l = meshesOf("31", "cot_dung"); const b = l.length ? elBox(l) : sc.box; SR = { x0: b.min.x, x1: b.max.x, z0: b.min.z, z1: b.max.z }; SH = sc.box.max.y; sc.holder.children.forEach(c => { c.visible = false; }); }
+  const scaf = new THREE.Group(); scaf.visible = false; scene.add(scaf); let tubeM = null, plankM = null, tubeY = [], plankY = [], nets = [];
+  if (SR) {
+    const X = new THREE.Vector3(1, 0, 0), q = new THREE.Vector3(), o = new THREE.Object3D(), tubes = [], planks = [];
+    const tube = (ax, ay, az, bx, by, bz) => { q.set(bx - ax, by - ay, bz - az); const L = q.length(); o.position.set((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2); o.quaternion.setFromUnitVectors(X, q.normalize()); o.scale.set(L, 1, 1); o.updateMatrix(); tubes.push({ y: Math.max(ay, by), m: o.matrix.clone() }); };
+    const W = 1.05, rects = [SR, { x0: SR.x0 + W, x1: SR.x1 - W, z0: SR.z0 + W, z1: SR.z1 - W }];
+    const perim = (r, f) => { for (let x = r.x0; x <= r.x1 + 0.01; x += (r.x1 - r.x0) / Math.round((r.x1 - r.x0) / 1.8)) { f(x, r.z0); f(x, r.z1); } for (let z = r.z0; z <= r.z1 + 0.01; z += (r.z1 - r.z0) / Math.round((r.z1 - r.z0) / 1.8)) { f(r.x0, z); f(r.x1, z); } };
+    for (let y = GL; y < SH - 0.1; y += 2) {
+      const y1 = Math.min(SH, y + 2);
+      for (const r of rects) { perim(r, (x, z) => tube(x, y, z, x, y1, z));                                   // cot dung D49 tung doan 2 m
+        tube(r.x0, y1, r.z0, r.x1, y1, r.z0); tube(r.x0, y1, r.z1, r.x1, y1, r.z1); tube(r.x0, y1, r.z0, r.x0, y1, r.z1); tube(r.x1, y1, r.z0, r.x1, y1, r.z1); } // thanh giang ngang
+      // giang cheo mat ngoai (cach 2 nhip)
+      const r = SR, nx = Math.round((r.x1 - r.x0) / 1.8), nz = Math.round((r.z1 - r.z0) / 1.8), sx = (r.x1 - r.x0) / nx, sz = (r.z1 - r.z0) / nz;
+      for (let k = 0; k < nx; k += 4) { tube(r.x0 + k * sx, y, r.z0, r.x0 + (k + 1) * sx, y1, r.z0); tube(r.x0 + k * sx, y, r.z1, r.x0 + (k + 1) * sx, y1, r.z1); }
+      for (let k = 0; k < nz; k += 4) { tube(r.x0, y, r.z0 + k * sz, r.x0, y1, r.z0 + (k + 1) * sz); tube(r.x1, y, r.z0 + k * sz, r.x1, y1, r.z0 + (k + 1) * sz); }
+    }
+    // san thao tac (van go) tai moi tang, nam giua 2 hang cot
+    for (const y of [4.2, 8.4, 12.0, 15.6, 19.2, 22.6].filter(v => v < SH)) { const r = SR;
+      for (const [cx, cz, sx, sz] of [[(r.x0 + r.x1) / 2, r.z0 + W / 2, r.x1 - r.x0, W], [(r.x0 + r.x1) / 2, r.z1 - W / 2, r.x1 - r.x0, W], [r.x0 + W / 2, (r.z0 + r.z1) / 2, W, r.z1 - r.z0 - 2 * W], [r.x1 - W / 2, (r.z0 + r.z1) / 2, W, r.z1 - r.z0 - 2 * W]]) {
+        o.position.set(cx, y, cz); o.quaternion.identity(); o.scale.set(sx, 0.05, sz); o.updateMatrix(); planks.push({ y, m: o.matrix.clone() }); } }
+    tubes.sort((a, b) => a.y - b.y); planks.sort((a, b) => a.y - b.y); tubeY = tubes.map(t => t.y); plankY = planks.map(p => p.y);
+    tubeM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.05, 0.05), std(0x9aa3ad, { metalness: 0.6, roughness: 0.4 }), tubes.length); tubes.forEach((t, k) => tubeM.setMatrixAt(k, t.m)); tubeM.castShadow = true; scaf.add(tubeM);
+    plankM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), std(0xb08850, { roughness: 0.9 }), planks.length); planks.forEach((p, k) => plankM.setMatrixAt(k, p.m)); scaf.add(plankM);
+    // luoi xanh bao che: 4 mat dung phia ngoai, van luoi
+    const cv = document.createElement("canvas"); cv.width = cv.height = 64; const cx2 = cv.getContext("2d"); cx2.fillStyle = "#2f9a4c"; cx2.fillRect(0, 0, 64, 64); cx2.strokeStyle = "#1d6b33"; cx2.lineWidth = 3;
+    for (let k = 0; k <= 64; k += 16) { cx2.beginPath(); cx2.moveTo(k, 0); cx2.lineTo(k, 64); cx2.stroke(); cx2.beginPath(); cx2.moveTo(0, k); cx2.lineTo(64, k); cx2.stroke(); }
+    const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace;
+    const NETM = new THREE.MeshStandardMaterial({ map: tex, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false, roughness: 0.9 });
+    const off = 0.12;
+    for (const [cx, cz, w, ry] of [[(SR.x0 + SR.x1) / 2, SR.z0 - off, SR.x1 - SR.x0, 0], [(SR.x0 + SR.x1) / 2, SR.z1 + off, SR.x1 - SR.x0, 0], [SR.x0 - off, (SR.z0 + SR.z1) / 2, SR.z1 - SR.z0, Math.PI / 2], [SR.x1 + off, (SR.z0 + SR.z1) / 2, SR.z1 - SR.z0, Math.PI / 2]]) {
+      const g = new THREE.PlaneGeometry(1, 1); g.translate(0, 0.5, 0); const t2 = tex.clone(); t2.needsUpdate = true; t2.repeat.set(w / 2, (SH - GL) / 2);
+      const m = new THREE.Mesh(g, NETM.clone()); m.material.map = t2; m.position.set(cx, GL, cz); m.rotation.y = ry; m.scale.set(w, SH - GL, 1); m.renderOrder = 2; scaf.add(m); nets.push(m); }
+  }
+  // diem dung hop le cua cong nhan tren tung san (do bang tia chieu xuong san BT, cach mep >= 1 m)
+  const rc = new THREE.Raycaster(), DOWN = new THREE.Vector3(0, -1, 0), V = new THREE.Vector3();
+  const LVL = [["14", "2027-04-19"], ["20", "2027-04-26"], ["21", "2027-05-12"], ["23", "2027-06-01"], ["25", "2027-06-21"], ["27", "2027-07-10"], ["29", "2027-07-30"]].map(([f, from]) => {
+    const slabs = meshesOf(f, "Floor"), ty = bb(f) ? bb(f).max.y : 0, pts = [];
+    const hy = (px, pz) => { rc.set(V.set(px, ty + 3, pz), DOWN); const h = rc.intersectObjects(slabs, false)[0]; return h && h.point.y > ty - 0.8 ? h.point.y : null; };
+    if (slabs.length) for (let x = bld.min.x + 1; x < bld.max.x - 1; x += 2.2) for (let z = bld.min.z + 1; z < bld.max.z - 1; z += 2.2) { const y = hy(x, z); if (y === null) continue;
+      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].every(([a, b]) => { const yy = hy(x + a, z + b); return yy !== null && Math.abs(yy - y) < 0.25; })) pts.push([x, y, z]); }
+    return { from: D(from), pts }; }).filter(l => l.pts.length);
+  const curLvl = t => { let k = 0; LVL.forEach((l, i) => { if (t >= l.from) k = i; }); return k; };
   const o3 = new THREE.Object3D(), Z0 = new THREE.Matrix4().makeScale(0, 0, 0);
   const T = { pile0: D("2027-02-22") + 7 * H, pile1: D("2027-03-27") + 17 * H, dig: D("2027-03-29"), hand: D("2027-03-31"), lean: D("2027-04-02"), reb: D("2027-04-03"), conc: D("2027-04-08"), fill0: D("2027-04-15") + 7 * H, fill1: D("2027-04-18") + 17 * H };
   const fmtY = y => (y >= 0 ? "+" : "") + y.toFixed(2).replace(".", ",");
@@ -304,6 +346,10 @@ export function buildExtras(scene, items, C) {
       else if (fillM) { e.position.set(bot.x0 + 4 + (bot.x1 - bot.x0 - 8) * ((uF * 3) % 1), fy, bot.z1 - 4); e.rotation.y = Math.PI / 2; digPose(e, ph, Math.PI / 2); }
       else { e.position.set(bot.x0 + 4 + (bot.x1 - bot.x0 - 8) * uH, PF, bot.z0 + 3); e.rotation.y = -Math.PI / 2; digPose(e, ph, Math.PI / 2); } });
     land.visible = t >= D("2027-12-09");
+    // gian giao: dung len 17/08-24/08, thao tu tren xuong 30/10-06/11
+    if (tubeM) { const hS = GL + (SH - GL) * ramp(t, D("2027-08-17"), D("2027-08-24") + 17 * H) * (1 - ramp(t, D("2027-10-30"), D("2027-11-06")));
+      scaf.visible = hS > GL + 0.3; if (scaf.visible) { let n = 0; while (n < tubeY.length && tubeY[n] <= hS + 0.01) n++; tubeM.count = n; n = 0; while (n < plankY.length && plankY[n] <= hS) n++; plankM.count = n;
+        const nh = Math.max(0.01, Math.min(SH, hS) - GL); for (const m of nets) { m.scale.y = nh; m.material.map.repeat.y = nh / 2; } } }
     sheet.visible = t >= D("2027-03-26") && t < T.fill1; waler.visible = t >= T.dig && t < T.fill0;
     loadT.forEach((tr, i) => { tr.visible = digM; if (digM) { tr.position.set(Math.min(front + 13, top.x1 + 11), GL, top.z0 + (top.z1 - top.z0) * (i ? 0.72 : 0.28)); tr.userData.soil.visible = ((sec * 0.11 + i * 0.37) % 1) > 0.6; } });
     // ---- ghi chu chi tiet phan ngam
@@ -334,7 +380,9 @@ export function buildExtras(scene, items, C) {
       else if (t >= T.dig && t < T.fill0 && ftR.length) { const f = ftR[(i * 7) % ftR.length]; x = f.cx + Math.cos(ang) * 1.6; z = f.cz + Math.sin(ang) * 1.6;
         if (t < T.hand && x > front - 2) { w.o.visible = false; return; } y = PF + (t >= T.lean ? 0.1 : 0); }
       else if (t >= T.fill0 && t < D("2027-04-19")) { x = top.x0 + ((i % 9) + 0.5) / 9 * (top.x1 - top.x0) + Math.cos(ang); z = top.z0 + (Math.floor(i / 9) + 0.5) / 4 * (top.z1 - top.z0) + Math.sin(ang); y = t >= T.fill1 ? 0 : fy; }
-      else { y = t < D("2027-04-19") ? (t < T.pile0 ? GL : 0) : lvl(t); const gx = (i % 6 + 0.5) / 6, gz = (Math.floor(i / 6) + 0.5) / 6;
+      else if (t >= D("2027-04-19") && LVL.length) { let k = t >= D("2027-08-17") ? i % LVL.length : curLvl(t); if (t < D("2027-08-17") && k > 0 && (i % 3 === 0 || (k === LVL.length - 1 && i % 2))) k--; const L = LVL[k], p = L.pts[(i * 37) % L.pts.length];
+        x = p[0] + Math.cos(ang) * 0.8; y = p[1]; z = p[2] + Math.sin(ang) * 0.8; }
+      else { y = t < T.pile0 ? GL : 0; const gx = (i % 6 + 0.5) / 6, gz = (Math.floor(i / 6) + 0.5) / 6;
         x = bld.min.x + gx * (bld.max.x - bld.min.x) + Math.cos(ang) * 1.5; z = bld.min.z + gz * (bld.max.z - bld.min.z) + Math.sin(ang) * 1.5; }
       w.o.position.set(x, y + Math.abs(Math.sin(sec * 6 + i)) * 0.05, z); w.o.rotation.y = -ang; });
     return note;
